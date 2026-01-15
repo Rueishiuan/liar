@@ -1,729 +1,104 @@
-<!doctype html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>市長不進議會，總統不進國會</title>
-  <meta name="description" content="以可核對日期為起算點的時間海報。" />
-  <meta property="og:title" content="市長不進議會，總統不進國會" />
-  <meta property="og:description" content="以可核對日期為起算點的時間海報。" />
-  <meta property="og:type" content="website" />
-  <meta name="color-scheme" content="dark light" />
+const ANCHORS = {
+  // 1) 彈劾：你之前採 2025/12/19 11:40
+  impeach: {
+    start: "2025-12-19T11:40:00+08:00",
+    foot: "2025/12/19 11:40｜宣布啟動程序"
+  },
 
-  <style>
-    :root{
-      --bg0:#05060A; --bg1:#0A0E1A;
-      --text:#F4F7FF;
-      --muted: rgba(244,247,255,.74);
-      --muted2: rgba(244,247,255,.58);
-      --line: rgba(255,255,255,.14);
-      --a1:#7CFFCB; --a2:#7AA7FF; --a3:#FF7AD9; --a4:#FFD27A;
-      --shadow: 0 22px 70px rgba(0,0,0,.55);
-      --glow: 0 0 60px rgba(122,167,255,.20);
-      --radius: 22px; --radius2: 30px;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
-    }
-    *{box-sizing:border-box}
-    /* === 海報計時卡（截圖同款）=== */
-.timerRow{
-  display:grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-@media (max-width: 980px){
-  .timerRow{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 560px){
-  .timerRow{ grid-template-columns: 1fr; }
-}
+  // 2) 第二張（CRITICAL）你可改成你真正想呈現的事件
+  //   先給一個「示範」：用 2025/12/26（彈劾時程曝光/表決節點）當起算
+  crit: {
+    start: "2025-12-26T09:00:00+08:00",
+    foot: "2025/12/26｜彈劾時程節點（示範，可改）"
+  },
 
-.tCard{
-  position:relative;
-  border-radius: 16px;
-  padding: 14px 14px 12px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.35));
-  box-shadow: 0 18px 45px rgba(0,0,0,.55);
-  overflow:hidden;
-  min-height: 138px;
-}
+  // 3) 國防特別預算：採 2025/11/26（宣布 1.25 兆）
+  defense: {
+    start: "2025-11-26T11:00:00+08:00",
+    foot: "2025/11/26｜宣布 1.25 兆特別預算"
+  },
 
-.tCard:before{
-  content:"";
-  position:absolute;
-  inset:-2px;
-  pointer-events:none;
-  opacity:.55;
-  background:
-    radial-gradient(260px 120px at 30% 20%, rgba(122,167,255,.18), transparent 60%),
-    radial-gradient(240px 120px at 85% 40%, rgba(255,122,217,.12), transparent 60%),
-    radial-gradient(240px 120px at 50% 120%, rgba(124,255,203,.10), transparent 60%);
-  filter: blur(8px);
-}
-
-.tBadge{
-  position:absolute;
-  top: 10px;
-  right: 10px;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: .18em;
-  padding: 3px 6px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.16);
-  background: rgba(0,0,0,.35);
-  color: rgba(255,255,255,.70);
-}
-
-.tIcon{
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  display:grid;
-  place-items:center;
-  margin: 2px auto 10px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(0,0,0,.35);
-  box-shadow: 0 10px 24px rgba(0,0,0,.45);
-  font-size: 16px;
-}
-
-.tTitle{
-  text-align:center;
-  font-weight: 900;
-  font-size: 13px;
-  letter-spacing:.2px;
-  line-height: 1.25;
-  margin: 0 0 10px;
-  color: rgba(244,247,255,.92);
-}
-
-.tDigits{
-  display:flex;
-  justify-content:center;
-  align-items:baseline;
-  gap: 10px;
-  font-family: var(--mono);
-  margin: 0 0 8px;
-}
-
-.tNum{
-  font-size: 34px;
-  font-weight: 900;
-  letter-spacing: .02em;
-  line-height: 1;
-  text-shadow: 0 0 22px rgba(255,255,255,.08), 0 18px 60px rgba(0,0,0,.55);
-}
-.tDot{
-  font-size: 22px;
-  opacity: .55;
-  transform: translateY(-2px);
-}
-
-.tFoot{
-  text-align:center;
-  font-size: 11px;
-  color: rgba(244,247,255,.45);
-  border-top: 1px solid rgba(255,255,255,.08);
-  padding-top: 8px;
-  line-height: 1.35;
-}
-
-/* 每張卡的主色（跟截圖類似：紅 / 淺白 / 黃 / 橘） */
-.t-red   .tNum{ color: rgba(255,93,108,.95); text-shadow: 0 0 16px rgba(255,93,108,.18), 0 18px 60px rgba(0,0,0,.55); }
-.t-white .tNum{ color: rgba(244,247,255,.88); }
-.t-yellow .tNum{ color: rgba(255,210,122,.95); text-shadow: 0 0 16px rgba(255,210,122,.18), 0 18px 60px rgba(0,0,0,.55); }
-.t-orange .tNum{ color: rgba(255,170,90,.95); text-shadow: 0 0 16px rgba(255,170,90,.18), 0 18px 60px rgba(0,0,0,.55); }
-
-    body{
-      margin:0; min-height:100vh;
-      font-family: var(--sans);
-      color: var(--text);
-      background:
-        radial-gradient(1100px 720px at 20% -10%, rgba(122,167,255,.30), transparent 60%),
-        radial-gradient(900px 650px at 105% 5%, rgba(255,122,217,.24), transparent 56%),
-        radial-gradient(900px 650px at 55% 115%, rgba(124,255,203,.16), transparent 60%),
-        linear-gradient(180deg, var(--bg0), var(--bg1) 55%, #04050A);
-      overflow-x:hidden;
-    }
-    .aurora{
-      position: fixed; inset: -30vh -20vw; pointer-events:none;
-      opacity:.62; filter: blur(26px); mix-blend-mode: screen;
-      background: conic-gradient(from 220deg,
-        rgba(122,167,255,.00), rgba(122,167,255,.30),
-        rgba(255,122,217,.22), rgba(255,210,122,.20),
-        rgba(124,255,203,.20), rgba(122,167,255,.26),
-        rgba(122,167,255,.00));
-      animation: drift 18s ease-in-out infinite alternate;
-    }
-    @keyframes drift{
-      0%{ transform: translate3d(-2%, -1%, 0) rotate(-6deg) scale(1.03); }
-      100%{ transform: translate3d(3%, 2%, 0) rotate(7deg) scale(1.06); }
-    }
-
-    .wrap{ max-width: 1180px; margin: 0 auto; padding: 26px 18px 72px; position:relative; }
-    .poster{
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: var(--radius2);
-      background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.04));
-      box-shadow: var(--shadow), var(--glow);
-      overflow:hidden;
-      position:relative;
-    }
-    .poster:before{
-      content:""; position:absolute; inset:-2px; pointer-events:none;
-      background:
-        radial-gradient(900px 180px at 20% 0%, rgba(124,255,203,.28), transparent 60%),
-        radial-gradient(900px 180px at 80% 0%, rgba(255,122,217,.24), transparent 60%),
-        radial-gradient(900px 260px at 50% 120%, rgba(122,167,255,.18), transparent 62%);
-      filter: blur(10px); opacity:.9;
-    }
-    .poster>*{ position:relative; z-index:1; }
-
-    header{ padding: 22px 22px 14px; border-bottom: 1px solid rgba(255,255,255,.10); }
-    .heroRow{ display:grid; grid-template-columns: 1.15fr .85fr; gap:18px; align-items: stretch; }
-    @media (max-width: 980px){ .heroRow{ grid-template-columns:1fr; } }
-
-    .headline{
-      border-radius: 22px; padding: 18px 16px 14px;
-      background: linear-gradient(135deg, rgba(0,0,0,.22), rgba(255,255,255,.05));
-      border: 1px solid rgba(255,255,255,.12);
-      position:relative; overflow:hidden;
-    }
-    .headline:after{
-      content:""; position:absolute; inset:-2px; pointer-events:none;
-      background: conic-gradient(from 180deg,
-        rgba(124,255,203,.00), rgba(124,255,203,.26),
-        rgba(122,167,255,.30), rgba(255,122,217,.26),
-        rgba(255,210,122,.22), rgba(124,255,203,.24),
-        rgba(124,255,203,.00));
-      filter: blur(16px); opacity:.38;
-    }
-    .headline>*{ position:relative; z-index:1; }
-
-    h1{
-      margin:0;
-      font-size: clamp(30px, 4.2vw, 54px);
-      letter-spacing: .9px;
-      line-height: 1.02;
-      text-shadow: 0 18px 50px rgba(0,0,0,.60);
-    }
-    .slogan{ margin:10px 0 0; color: var(--muted); font-size:15px; line-height:1.65; max-width:78ch; }
-
-    .stamps{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
-    .stamp{
-      display:inline-flex; align-items:center; gap:10px;
-      padding:10px 12px; border-radius: 999px;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.22);
-      backdrop-filter: blur(10px);
-      color: var(--muted);
-      font-size:13px;
-      white-space:nowrap;
-    }
-    .stamp b{ color: var(--text); }
-
-    .corner{
-      border-radius: 22px; padding: 16px;
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.16));
-      border: 1px solid rgba(255,255,255,.12);
-      display:flex; flex-direction:column; gap:12px;
-    }
-    .pill{
-      display:flex; align-items:center; gap:10px;
-      padding:10px 12px; border-radius: 16px;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.06);
-      backdrop-filter: blur(10px);
-    }
-    .pill label{ font-size:12px; color: var(--muted2); white-space:nowrap; }
-    .pill input{
-      font-family: var(--mono);
-      font-size:12px;
-      color: var(--text);
-      background: transparent;
-      border:none; outline:none;
-      width: 175px;
-    }
-    .btnRow{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    .btn{
-      border:none; cursor:pointer;
-      border-radius: 999px;
-      padding:10px 14px;
-      font-weight: 900;
-      letter-spacing:.2px;
-      color:#07111E;
-      background: linear-gradient(135deg, var(--a1), var(--a2));
-      box-shadow: 0 14px 34px rgba(122,167,255,.22);
-    }
-    .btn:active{ transform: translateY(1px); }
-    .miniBadge{
-      display:inline-flex; align-items:center; gap:10px;
-      padding:10px 12px; border-radius: 999px;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.22);
-      color: var(--muted2);
-      font-size:12px; font-family: var(--mono);
-      white-space:nowrap;
-    }
-    .note{ color: var(--muted2); font-size:12px; line-height:1.7; margin:0; }
-    .note code{
-      font-family: var(--mono);
-      background: rgba(255,255,255,.07);
-      padding:2px 6px; border-radius:8px;
-      border:1px solid rgba(255,255,255,.10);
-    }
-
-    .content{
-      padding: 18px 18px 20px;
-      display:grid;
-      grid-template-columns: 1.22fr .78fr;
-      gap: 16px;
-    }
-    @media (max-width: 980px){ .content{ grid-template-columns:1fr; } }
-
-    /* ✅ 重要：先把卡片 HTML 直接寫出來（JS 壞了也不會空白） */
-    .stack{ display:grid; gap:12px; }
-    .panel{
-      border: 1px solid rgba(255,255,255,.12);
-      background: linear-gradient(135deg, rgba(0,0,0,.22), rgba(255,255,255,.05));
-      border-radius: var(--radius);
-      overflow:hidden;
-      position:relative;
-    }
-    .panel:before{
-      content:""; position:absolute; inset:-2px; pointer-events:none;
-      background:
-        radial-gradient(700px 220px at 10% 0%, rgba(124,255,203,.16), transparent 60%),
-        radial-gradient(640px 240px at 100% 10%, rgba(255,122,217,.16), transparent 55%),
-        radial-gradient(620px 260px at 50% 120%, rgba(122,167,255,.12), transparent 55%);
-      opacity:.95;
-    }
-    .panel>*{ position:relative; z-index:1; }
-
-    .panelHead{
-      padding:14px 14px 10px;
-      border-bottom:1px solid rgba(255,255,255,.10);
-      display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;
-    }
-    .panelHead h2{ margin:0; font-size:15px; line-height:1.35; letter-spacing:.2px; display:flex; align-items:center; gap:10px; }
-    .panelHead p{ margin:6px 0 0; color: var(--muted); font-size:12.5px; line-height:1.55; max-width:84ch; }
-    .since{ margin-left:auto; text-align:right; color: var(--muted2); font-size:12px; font-family: var(--mono); white-space:nowrap; }
-
-    .mega{ padding:12px 14px 14px; display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; }
-    @media (max-width: 560px){ .mega{ grid-template-columns:1fr; } }
-
-    .digit{
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.06);
-      padding: 12px 12px 10px;
-      display:flex;
-      align-items:baseline;
-      justify-content:space-between;
-      gap:12px;
-      min-height:82px;
-      position:relative;
-      overflow:hidden;
-    }
-    .digit:after{
-      content:""; position:absolute; inset:-2px; pointer-events:none;
-      background:
-        radial-gradient(260px 90px at 30% 10%, rgba(255,210,122,.18), transparent 60%),
-        radial-gradient(240px 90px at 90% 30%, rgba(122,167,255,.16), transparent 60%);
-      opacity:.9;
-    }
-    .digit>*{ position:relative; z-index:1; }
-    .digit b{
-      font-family: var(--mono);
-      font-size: clamp(34px, 4vw, 54px);
-      letter-spacing: 1px;
-      line-height: 1;
-      text-shadow:
-        0 0 26px rgba(122,167,255,.24),
-        0 0 34px rgba(255,122,217,.14),
-        0 18px 60px rgba(0,0,0,.55);
-    }
-    .digit span{ color: var(--muted); font-size:12px; letter-spacing:.3px; padding-bottom:6px; white-space:nowrap; }
-
-    .side{ display:grid; gap:12px; }
-    .sideCard{
-      border: 1px solid rgba(255,255,255,.12);
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.18));
-      border-radius: var(--radius);
-      overflow:hidden;
-      box-shadow: 0 18px 46px rgba(0,0,0,.36);
-    }
-    .sideCardHead{
-      padding:14px 14px 10px;
-      border-bottom:1px solid rgba(255,255,255,.10);
-      display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
-    }
-    .sideCardHead h3{ margin:0; font-size:14px; display:flex; align-items:center; gap:10px; letter-spacing:.2px; }
-    .sideCardBody{ padding:12px 14px 14px; }
-
-    .timeline{ margin:0; padding:0; list-style:none; display:grid; gap:10px; position:relative; }
-    .timeline:before{
-      content:""; position:absolute; left:11px; top:6px; bottom:6px; width:2px; background: rgba(255,255,255,.14);
-    }
-    .tItem{ display:grid; grid-template-columns: 26px 1fr; gap:10px; align-items:flex-start; }
-    .dot{
-      width:24px; height:24px; border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: radial-gradient(circle at 30% 30%, rgba(124,255,203,.70), rgba(122,167,255,.15));
-      box-shadow: 0 0 26px rgba(122,167,255,.18);
-      margin-top:2px;
-    }
-    .tText b{ display:block; font-size:13.5px; letter-spacing:.2px; line-height:1.25; }
-    .tText span{ display:block; margin-top:6px; color: var(--muted); font-size:12.5px; line-height:1.55; }
-    .tText em{ display:inline-block; margin-top:7px; font-style:normal; font-family: var(--mono); font-size:12px; color: var(--muted2); }
-
-    .evidence{ margin-top:16px; padding: 0 18px 18px; }
-    .eHead{ display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap; padding:14px 4px 12px; }
-    .eHead h3{ margin:0; font-size:16px; letter-spacing:.2px; display:flex; align-items:center; gap:10px; }
-
-    .mediaGrid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-    @media (max-width: 820px){ .mediaGrid{ grid-template-columns:1fr; } }
-    .embed{
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(0,0,0,.22);
-      border-radius: 18px; overflow:hidden;
-      box-shadow: 0 18px 40px rgba(0,0,0,.35);
-    }
-    .embed iframe{ width:100%; aspect-ratio:16/9; border:0; display:block; }
-    .cap{ padding:10px 12px 12px; font-size:12.5px; color: var(--muted); line-height:1.55; border-top:1px solid rgba(255,255,255,.10); }
-    .cap b{ color: var(--text); }
-
-    footer{
-      padding: 14px 18px 18px;
-      border-top: 1px solid rgba(255,255,255,.10);
-      color: var(--muted2);
-      font-size: 12px;
-      line-height: 1.7;
-      text-align:center;
-    }
-    footer code{
-      font-family: var(--mono);
-      background: rgba(255,255,255,.07);
-      padding:2px 6px; border-radius:8px;
-      border:1px solid rgba(255,255,255,.10);
-    }
-
-    .ico{ width:22px; height:22px; filter: drop-shadow(0 6px 18px rgba(0,0,0,.35)); }
-  </style>
-</head>
-
-<body>
-  <div class="aurora"></div>
-
-  <div class="wrap">
-    <div class="poster">
-
-      <header>
-        <div class="heroRow">
-          <section class="headline">
-            <h1>市長不進議會，<br/>總統不進國會</h1>
-            <p class="slogan">
-              以<strong>可核對日期</strong>作為起算點的「時間海報」。<br/>
-              不是印象，是計時器；不是口號，是時間軸。
-            </p>
-
-            <div class="stamps">
-              <div class="stamp"><span>🕰️</span> 時區：<b>亞洲/台北</b></div>
-              <div class="stamp" id="nowStamp"><span>⏳</span> 現在：<b>—</b></div>
-              <div class="stamp"><span>🧾</span> 版本：<b>2026/01/15 可顯示版</b></div>
-            </div>
-          </section>
-
-          <aside class="corner">
-            <div class="miniBadge">日期指定 / 即時</div>
-
-            <div class="pill">
-              <label for="asof">計到哪一天</label>
-              <input id="asof" placeholder="留空＝現在（台北）" />
-            </div>
-
-            <div class="btnRow">
-              <button class="btn" id="apply">套用</button>
-              <span class="miniBadge" id="modeBadge">模式：即時</span>
-            </div>
-
-            <p class="note">
-              想改起算點：搜尋 <code>ANCHORS</code> → 改 <code>start</code><br/>
-              建議格式：<code>YYYY-MM-DDTHH:mm:ss+08:00</code>
-            </p>
-          </aside>
-        </div>
-      </header>
-
-      <section class="content">
-        <!-- ✅ 先寫死三張卡（JS 只更新數字） -->
-        <div class="stack" id="timerStack">
-          <article class="panel" data-anchor="impeach">
-            <div class="panelHead">
-              <div>
-                <h2><span style="font-size:18px">⚖️</span> 賴清德被提出彈劾已過</h2>
-                <p>起算：2025/12/19 11:40（宣布啟動彈劾程序）。</p>
-              </div>
-              <div class="since" id="since-impeach">起算：—</div>
-            </div>
-            <div class="mega">
-              <div class="digit"><b id="d-impeach">—</b><span>天</span></div>
-              <div class="digit"><b id="h-impeach">—</b><span>小時</span></div>
-              <div class="digit"><b id="m-impeach">—</b><span>分鐘</span></div>
-            </div>
-          </article>
-
-          <article class="panel" data-anchor="defense">
-            <div class="panelHead">
-              <div>
-                <h2><span style="font-size:18px">🛡️</span> 宣布 1.25 兆特別國防預算後，未到立院專案報告已過</h2>
-                <p>說明：投書華郵為 2025/11/25；此計時採「宣布特別預算」的 2025/11/26。</p>
-              </div>
-              <div class="since" id="since-defense">起算：—</div>
-            </div>
-            <div class="mega">
-              <div class="digit"><b id="d-defense">—</b><span>天</span></div>
-              <div class="digit"><b id="h-defense">—</b><span>小時</span></div>
-              <div class="digit"><b id="m-defense">—</b><span>分鐘</span></div>
-            </div>
-          </article>
-
-          <article class="panel" data-anchor="inaug">
-            <div class="panelHead">
-              <div>
-                <h2><span style="font-size:18px">🏛️</span> 自 2024/05/20 就職以來，未赴立院國情諮詢已過</h2>
-                <p>起算：2024/05/20（就職）。</p>
-              </div>
-              <div class="since" id="since-inaug">起算：—</div>
-            </div>
-            <div class="mega">
-              <div class="digit"><b id="d-inaug">—</b><span>天</span></div>
-              <div class="digit"><b id="h-inaug">—</b><span>小時</span></div>
-              <div class="digit"><b id="m-inaug">—</b><span>分鐘</span></div>
-            </div>
-          </article>
-        </div>
-
-        <div class="side">
-          <div class="sideCard">
-            <div class="sideCardHead">
-              <h3>
-                <svg class="ico" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-                  <path d="M14 14h36v36H14V14Z" stroke="rgba(255,255,255,.70)" stroke-width="2"/>
-                  <path d="M20 26h24M20 34h24M20 42h18" stroke="rgba(255,255,255,.35)" stroke-width="2"/>
-                  <circle cx="22" cy="20" r="2" fill="rgba(255,210,122,.85)"/>
-                </svg>
-                對照時間軸
-              </h3>
-              <span class="miniBadge">可核對節點</span>
-            </div>
-            <div class="sideCardBody">
-              <ul class="timeline" id="timeline">
-                <!-- JS 會填入；但即使 JS 掛了，下面也會有提示文字 -->
-              </ul>
-              <p class="note">
-                如果你看到數字不動，請按 <code>Ctrl+F5</code> 強制更新快取。
-              </p>
-            </div>
-          </div>
-
-          <div class="sideCard">
-            <div class="sideCardHead">
-              <h3>
-                <svg class="ico" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-                  <path d="M14 44l20-20 6 6-20 20H14v-6Z" fill="rgba(255,210,122,.18)" stroke="rgba(255,255,255,.80)" stroke-width="2"/>
-                  <path d="M34 16l10-10 10 10-10 10-10-10Z" fill="rgba(124,255,203,.14)" stroke="rgba(255,255,255,.80)" stroke-width="2"/>
-                  <path d="M10 56h44" stroke="rgba(255,255,255,.35)" stroke-width="2"/>
-                </svg>
-                歷史尺度（台南市長）
-              </h3>
-              <span class="miniBadge">對照用</span>
-            </div>
-            <div class="sideCardBody">
-              <p class="note" style="margin-top:0">
-                不進台南市議會：<b>232 天</b>（常見表述）<br/>
-                監察院彈劾：<b>1 案</b>（該案）<br/>
-              </p>
-              <div class="miniBadge">此區可擴充：案號/日期/來源連結</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="evidence">
-        <div class="eHead">
-          <h3>
-            <svg class="ico" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-              <path d="M10 18h18l8 12-8 12H10l8-12-8-12Z" fill="rgba(122,167,255,.18)" stroke="rgba(255,255,255,.78)" stroke-width="2"/>
-              <path d="M36 22h14M36 30h18M36 38h14" stroke="rgba(255,255,255,.35)" stroke-width="2"/>
-              <circle cx="55" cy="30" r="3" fill="rgba(255,122,217,.55)"/>
-            </svg>
-            影片證據牆（可替換）
-          </h3>
-          <div class="miniBadge">YouTube 嵌入</div>
-        </div>
-
-        <div class="mediaGrid">
-          <div class="embed">
-            <iframe
-              src="https://www.youtube.com/embed/kR9rLzZ-zYk?start=5712"
-              title="辯論/政見素材（示例）"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowfullscreen></iframe>
-            <div class="cap"><b>辯論素材：</b>建議你換成「完整辯論官方回放」版本更穩。</div>
-          </div>
-
-          <div class="embed">
-            <iframe
-              src="https://www.youtube.com/embed/iGhD3Ez606g"
-              title="官方談話（示例）"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowfullscreen></iframe>
-            <div class="cap"><b>官方影片：</b>你可替換為你指定來源。</div>
-          </div>
-        </div>
-      </section>
-
-      <footer>
-        ✅ 這份是「純 HTML + CSS + JS」，GitHub Pages 可直接顯示。<br/>
-        你如果看到空白，請到瀏覽器按 <code>Ctrl+F5</code>，或開 F12 看 Console 紅字。
-      </footer>
-    </div>
-  </div>
-
-<script>
-  // ====== 安全工具：任何錯都不要讓整頁死掉 ======
-  function safe(fn){
-    try{ fn(); }catch(e){ console.error(e); }
+  // 4) 就職：2024/05/20
+  inaug: {
+    start: "2024-05-20T09:00:00+08:00",
+    foot: "2024/05/20｜宣誓就職"
   }
-  function $(id){ return document.getElementById(id); }
+};
 
-  // ====== 起算點（你可自行修改） ======
-  const ANCHORS = {
-    impeach: { start: "2025-12-19T11:40:00+08:00" },
-    defense: { start: "2025-11-26T11:00:00+08:00" },
-    inaug:   { start: "2024-05-20T09:00:00+08:00" },
-  };
+function diffParts(start, end){
+  let ms = end - start;
+  const sign = ms < 0 ? -1 : 1;
+  ms = Math.abs(ms);
 
-  const TIMELINE = [
-    { date: "2024/05/20", title: "就職總統", sub: "作為『國情諮詢』討論的時間起點。" },
-    { date: "2025/11/25", title: "華郵投書刊登", sub: "總統府英文網站與華郵原文皆可核對。" },
-    { date: "2025/11/26", title: "宣布 1.25 兆特別國防預算", sub: "多家外媒/政府對外報導可核對。" },
-    { date: "2025/12/19", title: "宣布啟動彈劾程序", sub: "公開報導：宣布即刻啟動程序。" }
-  ];
+  const totalMin = Math.floor(ms / 60000);
+  const days  = Math.floor(totalMin / (60*24));
+  const hours = Math.floor((totalMin - days*60*24) / 60);
+  const mins  = totalMin - days*60*24 - hours*60;
+  return { sign, days, hours, mins };
+}
+function fmt2(n){ return String(n).padStart(2,"0"); }
+function $(id){ return document.getElementById(id); }
 
-  function toDateOrNull(v){
-    if(!v) return null;
-    const s = v.trim();
-    if(!s) return null;
-    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}))?$/);
-    if(m){
-      const [_,Y,M,D,hh="00",mm="00"] = m;
-      return new Date(`${Y}-${M}-${D}T${hh}:${mm}:00+08:00`);
-    }
-    const d = new Date(s);
-    return isNaN(d.getTime()) ? null : d;
+function getNow(){
+  const input = $("asof");
+  if(!input) return new Date();
+  const v = (input.value || "").trim();
+  if(!v) return new Date();
+
+  const m = v.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}))?$/);
+  if(m){
+    const [_,Y,M,D,hh="00",mm="00"] = m;
+    return new Date(`${Y}-${M}-${D}T${hh}:${mm}:00+08:00`);
   }
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
 
-  function diffParts(start, end){
-    let ms = end - start;
-    const sign = ms < 0 ? -1 : 1;
-    ms = Math.abs(ms);
+function setOne(key){
+  const conf = ANCHORS[key];
+  if(!conf) return;
 
-    const totalMin = Math.floor(ms / 60000);
-    const days  = Math.floor(totalMin / (60*24));
-    const hours = Math.floor((totalMin - days*60*24) / 60);
-    const mins  = totalMin - days*60*24 - hours*60;
-    return { sign, days, hours, mins };
-  }
-  function fmt2(n){ return String(n).padStart(2,"0"); }
+  const start = new Date(conf.start);
+  const now = getNow();
+  const { sign, days, hours, mins } = diffParts(start, now);
 
-  function setTimer(key){
-    const conf = ANCHORS[key];
-    if(!conf) return;
+  const d = $(`d-${key}`), h = $(`h-${key}`), m = $(`m-${key}`), f = $(`f-${key}`);
+  if(d) d.textContent = `${sign<0?"-":""}${days}`;
+  if(h) h.textContent = fmt2(hours);
+  if(m) m.textContent = fmt2(mins);
+  if(f) f.textContent = conf.foot || `起算：${start.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",hour12:false})}`;
+}
 
-    const start = new Date(conf.start);
+function updateAll(){
+  const nowStamp = $("nowStamp");
+  if(nowStamp){
     const now = getNow();
-
-    const { sign, days, hours, mins } = diffParts(start, now);
-
-    const d = $(`d-${key}`), h = $(`h-${key}`), m = $(`m-${key}`), s = $(`since-${key}`);
-    if(d) d.textContent = `${sign<0?"-":""}${days}`;
-    if(h) h.textContent = fmt2(hours);
-    if(m) m.textContent = fmt2(mins);
-    if(s) s.textContent = `起算：${start.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",hour12:false})}`;
+    nowStamp.innerHTML = `<span>⏳</span> 現在：<b>${now.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",hour12:false})}</b>`;
   }
 
-  function renderTimeline(){
-    const ul = $("timeline");
-    if(!ul) return;
-    ul.innerHTML = "";
-    TIMELINE.forEach(t=>{
-      const li = document.createElement("li");
-      li.className = "tItem";
-      li.innerHTML = `
-        <div class="dot" aria-hidden="true"></div>
-        <div class="tText">
-          <b>${t.title}</b>
-          <span>${t.sub}</span>
-          <em>${t.date}</em>
-        </div>`;
-      ul.appendChild(li);
-    });
-  }
+  setOne("impeach");
+  setOne("crit");
+  setOne("defense");
+  setOne("inaug");
+}
 
-  function updateNowStamp(){
-    const el = $("nowStamp");
-    if(!el) return;
-    const now = getNow();
-    el.innerHTML = `<span>⏳</span> 現在：<b>${now.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",hour12:false})}</b>`;
-  }
-
-  function getNow(){
-    const input = $("asof");
-    const d = input ? toDateOrNull(input.value) : null;
-    return d ?? new Date();
-  }
-
-  function applyMode(){
+// 套用按鈕
+const btn = $("apply");
+if(btn){
+  btn.addEventListener("click", ()=>{
     const input = $("asof");
     const badge = $("modeBadge");
-    const d = input ? toDateOrNull(input.value) : null;
-
-    if(input && input.value.trim() && d === null){
-      alert("你輸入的日期格式無法解析。\n建議：2025-12-28 或 2025-12-28 12:00 或 ISO 格式。");
-      return;
-    }
-    if(badge) badge.textContent = (input && input.value.trim()) ? "模式：指定日期" : "模式：即時";
+    const v = input ? input.value.trim() : "";
+    if(badge) badge.textContent = v ? "模式：指定日期" : "模式：即時";
     updateAll();
-  }
-
-  function updateAll(){
-    updateNowStamp();
-    setTimer("impeach");
-    setTimer("defense");
-    setTimer("inaug");
-  }
-
-  safe(()=>renderTimeline());
-  safe(()=>updateAll());
-
-  safe(()=>{
-    const btn = $("apply");
-    if(btn) btn.addEventListener("click", applyMode);
   });
+}
 
-  // 即時模式：每 30 秒刷新（指定日期則不刷）
-  safe(()=>{
-    setInterval(()=>{
-      const input = $("asof");
-      if(input && input.value.trim()) return;
-      updateAll();
-    }, 30000);
-  });
-</script>
-</body>
-</html>
+// 即時刷新（指定日期就停止刷新）
+setInterval(()=>{
+  const input = $("asof");
+  if(input && input.value.trim()) return;
+  updateAll();
+}, 30000);
 
+updateAll();
