@@ -25,6 +25,117 @@
       --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
     }
     *{box-sizing:border-box}
+    /* === 海報計時卡（截圖同款）=== */
+.timerRow{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 980px){
+  .timerRow{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px){
+  .timerRow{ grid-template-columns: 1fr; }
+}
+
+.tCard{
+  position:relative;
+  border-radius: 16px;
+  padding: 14px 14px 12px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.35));
+  box-shadow: 0 18px 45px rgba(0,0,0,.55);
+  overflow:hidden;
+  min-height: 138px;
+}
+
+.tCard:before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  pointer-events:none;
+  opacity:.55;
+  background:
+    radial-gradient(260px 120px at 30% 20%, rgba(122,167,255,.18), transparent 60%),
+    radial-gradient(240px 120px at 85% 40%, rgba(255,122,217,.12), transparent 60%),
+    radial-gradient(240px 120px at 50% 120%, rgba(124,255,203,.10), transparent 60%);
+  filter: blur(8px);
+}
+
+.tBadge{
+  position:absolute;
+  top: 10px;
+  right: 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .18em;
+  padding: 3px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(0,0,0,.35);
+  color: rgba(255,255,255,.70);
+}
+
+.tIcon{
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display:grid;
+  place-items:center;
+  margin: 2px auto 10px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.35);
+  box-shadow: 0 10px 24px rgba(0,0,0,.45);
+  font-size: 16px;
+}
+
+.tTitle{
+  text-align:center;
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing:.2px;
+  line-height: 1.25;
+  margin: 0 0 10px;
+  color: rgba(244,247,255,.92);
+}
+
+.tDigits{
+  display:flex;
+  justify-content:center;
+  align-items:baseline;
+  gap: 10px;
+  font-family: var(--mono);
+  margin: 0 0 8px;
+}
+
+.tNum{
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  line-height: 1;
+  text-shadow: 0 0 22px rgba(255,255,255,.08), 0 18px 60px rgba(0,0,0,.55);
+}
+.tDot{
+  font-size: 22px;
+  opacity: .55;
+  transform: translateY(-2px);
+}
+
+.tFoot{
+  text-align:center;
+  font-size: 11px;
+  color: rgba(244,247,255,.45);
+  border-top: 1px solid rgba(255,255,255,.08);
+  padding-top: 8px;
+  line-height: 1.35;
+}
+
+/* 每張卡的主色（跟截圖類似：紅 / 淺白 / 黃 / 橘） */
+.t-red   .tNum{ color: rgba(255,93,108,.95); text-shadow: 0 0 16px rgba(255,93,108,.18), 0 18px 60px rgba(0,0,0,.55); }
+.t-white .tNum{ color: rgba(244,247,255,.88); }
+.t-yellow .tNum{ color: rgba(255,210,122,.95); text-shadow: 0 0 16px rgba(255,210,122,.18), 0 18px 60px rgba(0,0,0,.55); }
+.t-orange .tNum{ color: rgba(255,170,90,.95); text-shadow: 0 0 16px rgba(255,170,90,.18), 0 18px 60px rgba(0,0,0,.55); }
+
     body{
       margin:0; min-height:100vh;
       font-family: var(--sans);
@@ -615,3 +726,4 @@
 </script>
 </body>
 </html>
+
