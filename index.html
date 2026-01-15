@@ -1,1096 +1,501 @@
-<!doctype html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>市長不進議會，總統不進國會</title>
+import React, { useState, useEffect } from 'react';
+import { 
+  AlertTriangle, Clock, History, Gavel, ShieldAlert, XCircle, 
+  ArrowRight, Flame, Scale, FileText, Megaphone, DollarSign, 
+  Stethoscope, BookOpen, ExternalLink 
+} from 'lucide-react';
 
-  <!-- 分享預覽（可選）：若你之後放自訂縮圖，可在此加 og:image -->
-  <meta name="description" content="以可核對日期為起算點，視覺化呈現『已過多久』的時間軸對照。" />
-  <meta property="og:title" content="市長不進議會，總統不進國會" />
-  <meta property="og:description" content="以可核對日期為起算點，視覺化呈現『已過多久』的時間軸對照。" />
-  <meta property="og:type" content="website" />
-  <meta name="color-scheme" content="dark light" />
+// --- Data & Content ---
 
-  <style>
-    :root{
-      --bg0:#05060A;
-      --bg1:#0A0E1A;
-      --card: rgba(255,255,255,.08);
-      --card2: rgba(255,255,255,.11);
-      --line: rgba(255,255,255,.14);
-      --text:#F4F7FF;
-      --muted: rgba(244,247,255,.74);
-      --muted2: rgba(244,247,255,.58);
+const CRITICAL_EVENTS = [
+  {
+    id: 1,
+    title: "賴清德被提出彈劾已過",
+    targetDate: "2025-12-18T09:00:00",
+    description: "2025/12/18 藍白聯手啟動彈劾程序",
+    icon: <Gavel className="w-8 h-8 text-red-500" />,
+    color: "from-red-950 to-red-900",
+    textColor: "text-red-400"
+  },
+  {
+    id: 2,
+    title: "國防預算未報告天數",
+    targetDate: "2025-11-26T06:49:00", 
+    description: "2025/11/26 投書外媒宣布預算後神隱",
+    icon: <ShieldAlert className="w-8 h-8 text-yellow-500" />,
+    color: "from-yellow-950 to-yellow-900",
+    textColor: "text-yellow-400"
+  },
+  {
+    id: 3,
+    title: "就職以來未赴立院國情咨詢",
+    targetDate: "2024-05-20T09:00:00",
+    description: "2024/05/20 宣誓就職總統至今",
+    icon: <XCircle className="w-8 h-8 text-orange-500" />,
+    color: "from-orange-950 to-orange-900",
+    textColor: "text-orange-400"
+  }
+];
 
-      --a1:#7CFFCB; /* 清亮綠 */
-      --a2:#7AA7FF; /* 星光藍 */
-      --a3:#FF7AD9; /* 霓虹粉 */
-      --a4:#FFD27A; /* 金色 */
-      --danger:#FF5D6C;
+const HISTORY_STATS = {
+  tainanDays: 232,
+  impeachCount: 1,
+  title: "台南市長任內歷史紀錄",
+  subtitle: "民主憲政史上的惡例"
+};
 
-      --shadow: 0 22px 70px rgba(0,0,0,.55);
-      --glow: 0 0 60px rgba(122,167,255,.20);
+const CONTRADICTIONS = [
+  {
+    title: "洗牙順便拉票：醫療專業政治化",
+    date: "2025 近期發言",
+    source: "牙醫師公會晚宴致詞",
+    content: "公開要求牙醫師在幫病患洗牙時，若聽到病患支持在野黨，就要以此機會「遊說」對方支持預算。",
+    reason: "職業道德淪喪：將神聖的醫療行為當作政治勒索的工具，侵犯病患隱私與醫病關係，極度不適當。",
+    tag: "失言"
+  },
+  {
+    title: "自創憲法：預算必過論",
+    date: "2025/12",
+    source: "民進黨中常會下令",
+    content: "聲稱「憲法規定立法院必須在年底前通過總預算」，若不通過就是違憲。",
+    reason: "曲解憲法：憲法僅規範行政院有提案權，立法院有審議與刪減權。若「必須通過」，立法院將淪為行政院轄下的立法局，此說法完全無視權力分立原則。",
+    tag: "違憲亂政"
+  },
+  {
+    title: "國防預算：出口轉內銷",
+    date: "2025/11",
+    source: "華盛頓郵報投書 / 國防預算案",
+    content: "1.25兆鉅額特別預算，竟是先投書美國《華盛頓郵報》承諾，才回頭告知國內民眾與國會。",
+    reason: "藐視國會：重大國家資源分配，應先循國內民主程序溝通，而非先向外國承諾以施壓國內，本末倒置。",
+    tag: "喪權辱國"
+  },
+  {
+    title: "空白授權：幾張PPT要一兆",
+    date: "2025 預算會期",
+    source: "立法院預算審查報告",
+    content: "高達1.25兆的潛艦與軍購預算，國防部僅提供極其簡陋的投影片說明，且總統拒絕赴立院說明細節。",
+    reason: "財政紀律崩壞：人民血汗錢不是空白支票，拒絕說明細節卻要求照單全收，是典型的獨裁者心態。",
+    tag: "財政黑箱"
+  },
+  {
+    title: "選擇性執法：拒絕執行軍人加薪",
+    date: "2025",
+    source: "立法院決議案",
+    content: "立法院三讀通過「軍人待遇條例修正案」（加薪與津貼），行政院卻以「預算權」為由拒不執行，也不副署。",
+    reason: "邏輯錯亂：口口聲聲說要強化國防、照顧軍人，卻親手擋下軍人加薪法案，證明所謂「抗中保台」只是口號，鬥爭在野黨才是真。",
+    tag: "行政怠惰"
+  },
+  {
+    title: "大罷免慘敗：32比0的民意",
+    date: "2025",
+    source: "基隆/新竹罷免案結果",
+    content: "發動全台大罷免試圖翻轉國會少數劣勢，結果遭遇 32:0 歷史性慘敗，卻仍指責在野黨不知檢討。",
+    reason: "缺乏反省：民意已透過選票明確拒絕政治惡鬥，執政者卻解讀為在野黨的錯，展現極致的雙重標準。",
+    tag: "政治惡鬥"
+  },
+  {
+    title: "國情咨詢：義務變違憲",
+    date: "2023 vs 2024",
+    source: "2024總統辯論會 vs 釋憲聲請書",
+    content: "選前辯論時強調「總統有義務應立法院要求到國會進行國情咨詢」，當選後卻透過釋憲將其解釋為「違憲」。",
+    reason: "誠信破產：為了逃避監督，不惜推翻自己選前的憲法承諾，視誠信為無物。",
+    tag: "髮夾彎"
+  },
+  {
+    title: "在野獨裁：世界政治笑話",
+    date: "2024-2025",
+    source: "總統府發言人聲明",
+    content: "指控國會多數黨是「民主獨裁」。",
+    reason: "邏輯死亡：獨裁必須掌握軍隊、警察、行政權與媒體。在野黨無一在手，如何獨裁？此說法違背基礎政治學常識。",
+    tag: "認知作戰"
+  },
+  {
+    title: "中華民國：災難說",
+    date: "2023/12/30",
+    source: "總統辯論會",
+    content: "脫口而出「把中華民國當作兩岸的護國神山...是要給台灣帶來災難？」",
+    reason: "國家定位錯亂：身為中華民國總統，卻視國號為災難，卻又依據此憲法宣誓就職，精神分裂。",
+    tag: "失言"
+  },
+  {
+    title: "違建爭議：賴皮寮信託",
+    date: "2023-2024",
+    source: "萬里老家爭議",
+    content: "萬里老家違建爭議，堅持是「礦工工寮」並以公益信託解套，未如一般民眾面臨即報即拆。",
+    reason: "特權階級：對照台南市長任內強硬拆遷南鐵東移，對自己老家違建卻極力護航，嚴以律人寬以待己。",
+    tag: "雙標"
+  },
+  {
+    title: "非核家園 vs 緊急使用",
+    date: "2023-2025",
+    source: "能源政策記者會",
+    content: "堅守非核家園神主牌，導致能源政策僵化，卻又鬆口「緊急時刻可重啟核能」。",
+    reason: "騙術：核能重啟需繁雜安檢，非按鈕即亮，「緊急使用」在實務上不可行，純粹話術欺騙。",
+    tag: "能源跳票"
+  },
+  {
+    title: "議會備詢：市長不進，總統不來",
+    date: "2015 vs 2024",
+    source: "台南市議會紀錄 / 立法院公報",
+    content: "2015年以議長涉賄為由拒進議會232天；如今以違憲為由拒進立院。",
+    reason: "慣性逃避：無論地方或中央，只要遇阻力即癱瘓議事運作，視民主監督程序為無物。",
+    tag: "藐視民主"
+  },
+  {
+    title: "功德說：低薪當作做善事",
+    date: "2017",
+    source: "行政院長任內發言",
+    content: "勉勵照服員薪水低（3萬元）當作是「做功德」。",
+    reason: "晉惠帝心態：將政府應解決的低薪結構問題，轉嫁為勞工的道德勒索。",
+    tag: "慣老闆"
+  },
+  {
+    title: "乾淨的煤：反智言論",
+    date: "2018",
+    source: "深澳電廠爭議",
+    content: "稱深澳電廠使用的是「乾淨的煤」，排放污染量與天然氣差不多。",
+    reason: "指鹿為馬：燃煤發電本質上即無法達到天然氣的潔淨度，為了政策護航不惜違反科學常識。",
+    tag: "反科學"
+  },
+  {
+    title: "信賴司法 vs 攻擊司法",
+    date: "2024-2025",
+    source: "柯文哲案 vs 鄭文燦案",
+    content: "對在野黨案件高喊「尊重司法、勿枉勿縱」，對自己黨內或不利判決則暗示司法不公或透過側翼攻擊。",
+    reason: "司法工具化：司法在眼中只是鬥爭工具，順我者昌，逆我者亡。",
+    tag: "法治雙標"
+  }
+];
 
-      --radius: 22px;
-      --radius2: 30px;
+// --- Components ---
 
-      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
-    }
+const TimerCard = ({ event }) => {
+  const [time, setTime] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
 
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      font-family: var(--sans);
-      color: var(--text);
-      background:
-        radial-gradient(1100px 720px at 20% -10%, rgba(122,167,255,.30), transparent 60%),
-        radial-gradient(900px 650px at 105% 5%, rgba(255,122,217,.24), transparent 56%),
-        radial-gradient(900px 650px at 55% 115%, rgba(124,255,203,.16), transparent 60%),
-        linear-gradient(180deg, var(--bg0), var(--bg1) 55%, #04050A);
-      overflow-x:hidden;
-    }
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date(); 
+      const start = new Date(event.targetDate);
+      const diff = now - start;
 
-    /* 背景流光 */
-    .aurora{
-      position: fixed;
-      inset: -30vh -20vw;
-      pointer-events:none;
-      opacity:.62;
-      filter: blur(26px);
-      mix-blend-mode: screen;
-      background:
-        conic-gradient(from 220deg,
-          rgba(122,167,255,.00),
-          rgba(122,167,255,.30),
-          rgba(255,122,217,.22),
-          rgba(255,210,122,.20),
-          rgba(124,255,203,.20),
-          rgba(122,167,255,.26),
-          rgba(122,167,255,.00));
-      animation: drift 18s ease-in-out infinite alternate;
-    }
-    @keyframes drift{
-      0%{ transform: translate3d(-2%, -1%, 0) rotate(-6deg) scale(1.03); }
-      100%{ transform: translate3d(3%, 2%, 0) rotate(7deg) scale(1.06); }
-    }
+      if (diff > 0) {
+        setTime({
+          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+          mins: Math.floor((diff / (1000 * 60)) % 60),
+          secs: Math.floor((diff / 1000) % 60)
+        });
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [event.targetDate]);
 
-    .wrap{
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 26px 18px 72px;
-      position:relative;
-    }
+  return (
+    <div className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${event.color} p-[1px] shadow-[0_0_20px_rgba(0,0,0,0.6)] transform hover:scale-105 transition-all duration-300 group`}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+      <div className="relative z-10 bg-[#0f1115]/90 h-full p-6 rounded-lg flex flex-col items-center text-center border-t border-white/5">
+        <div className="mb-4 p-4 bg-black/60 rounded-full border border-white/10 shadow-inner group-hover:border-red-500/50 transition-colors">
+          {event.icon}
+        </div>
+        <h3 className="text-lg font-bold text-gray-200 mb-2 tracking-wide">{event.title}</h3>
+        <div className={`text-4xl md:text-5xl font-black ${event.textColor} font-mono tracking-tighter my-4 drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]`}>
+          {time.days}<span className="text-sm text-gray-500 font-sans ml-1 mr-2">天</span>
+          {time.hours.toString().padStart(2, '0')}<span className="text-sm text-gray-500 font-sans ml-1 mr-2">時</span>
+          {time.mins.toString().padStart(2, '0')}<span className="text-sm text-gray-500 font-sans ml-1">分</span>
+        </div>
+        <p className="text-xs text-gray-500 mt-auto border-t border-gray-800 pt-3 w-full">
+          {event.description}
+        </p>
+      </div>
+    </div>
+  );
+};
 
-    /* 海報主框 */
-    .poster{
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: var(--radius2);
-      background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.04));
-      box-shadow: var(--shadow), var(--glow);
-      overflow:hidden;
-      position:relative;
-    }
+const DefenseBudgetDeepDive = () => (
+  <div className="bg-[#12141a] border border-red-900/50 rounded-xl overflow-hidden mb-20 relative">
+    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-600 via-red-600 to-yellow-600"></div>
+    <div className="p-8 md:p-12">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8">
+        <div>
+          <h2 className="text-3xl font-black text-white flex items-center gap-3">
+            <ShieldAlert className="w-8 h-8 text-red-500" />
+            國防預算黑箱實錄
+          </h2>
+          <p className="text-red-400 mt-2 font-mono text-sm tracking-widest">
+            THE 1.25 TRILLION SCANDAL
+          </p>
+        </div>
+        <div className="mt-4 md:mt-0 px-4 py-2 bg-red-950/30 border border-red-500/30 rounded text-red-400 text-xs font-bold">
+          專題追蹤
+        </div>
+      </div>
 
-    /* 上方霓虹邊光 */
-    .poster:before{
-      content:"";
-      position:absolute;
-      inset:-2px;
-      background:
-        radial-gradient(900px 180px at 20% 0%, rgba(124,255,203,.28), transparent 60%),
-        radial-gradient(900px 180px at 80% 0%, rgba(255,122,217,.24), transparent 60%),
-        radial-gradient(900px 260px at 50% 120%, rgba(122,167,255,.18), transparent 62%);
-      filter: blur(10px);
-      opacity:.9;
-      pointer-events:none;
-    }
-    .poster > *{ position:relative; z-index:1; }
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="bg-black/40 p-6 rounded-lg border-l-2 border-yellow-500 hover:bg-black/60 transition-colors">
+          <div className="flex items-center mb-4">
+            <ExternalLink className="w-5 h-5 text-yellow-500 mr-2" />
+            <h3 className="text-lg font-bold text-white">出口轉內銷</h3>
+          </div>
+          <p className="text-slate-400 text-sm leading-relaxed">
+            重大國防預算 1.25 兆，竟是先投書《華盛頓郵報》向美方輸誠，而非先向中華民國立法院報告。視國會監督為無物，將外國利益置於國內民主程序之上。
+          </p>
+        </div>
 
-    /* 海報標頭 */
-    header{
-      padding: 22px 22px 14px;
-      border-bottom: 1px solid rgba(255,255,255,.10);
-    }
+        <div className="bg-black/40 p-6 rounded-lg border-l-2 border-red-500 hover:bg-black/60 transition-colors">
+          <div className="flex items-center mb-4">
+            <FileText className="w-5 h-5 text-red-500 mr-2" />
+            <h3 className="text-lg font-bold text-white">空白授權</h3>
+          </div>
+          <p className="text-slate-400 text-sm leading-relaxed">
+            要求國會通過兆元預算，國防部卻僅提供「幾張投影片」說明。面對野黨要求提供細節與執行成效，總統拒絕赴立院說明，形同強索「空白支票」。
+          </p>
+        </div>
 
-    .heroRow{
-      display:grid;
-      grid-template-columns: 1.15fr .85fr;
-      gap: 18px;
-      align-items: stretch;
-    }
-    @media (max-width: 980px){
-      .heroRow{ grid-template-columns: 1fr; }
-    }
+        <div className="bg-black/40 p-6 rounded-lg border-l-2 border-orange-500 hover:bg-black/60 transition-colors">
+          <div className="flex items-center mb-4">
+            <XCircle className="w-5 h-5 text-orange-500 mr-2" />
+            <h3 className="text-lg font-bold text-white">說一套做一套</h3>
+          </div>
+          <p className="text-slate-400 text-sm leading-relaxed">
+            口口聲聲「強化國防、照顧國軍」，但當在野黨通過「軍人加薪法案」時，行政院卻悍然拒絕執行與副署。只要不是民進黨提的案子，連對軍人好都要擋。
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
-    .headline{
-      border-radius: 22px;
-      padding: 18px 16px 14px;
-      background: linear-gradient(135deg, rgba(0,0,0,.22), rgba(255,255,255,.05));
-      border: 1px solid rgba(255,255,255,.12);
-      overflow:hidden;
-      position:relative;
-    }
-    .headline:after{
-      content:"";
-      position:absolute;
-      inset:-2px;
-      background: conic-gradient(from 180deg,
-        rgba(124,255,203,.00),
-        rgba(124,255,203,.26),
-        rgba(122,167,255,.30),
-        rgba(255,122,217,.26),
-        rgba(255,210,122,.22),
-        rgba(124,255,203,.24),
-        rgba(124,255,203,.00));
-      filter: blur(16px);
-      opacity:.38;
-      pointer-events:none;
-    }
-    .headline > *{ position:relative; z-index:1; }
+const HistorySection = () => (
+  <div className="bg-gradient-to-r from-slate-900 to-slate-800 border-l-4 border-yellow-500 p-8 rounded-r-xl shadow-2xl mb-20 relative overflow-hidden group">
+    <div className="absolute top-0 right-0 w-64 h-full bg-yellow-500/5 -skew-x-12 transform origin-bottom-right group-hover:bg-yellow-500/10 transition-all duration-700"></div>
+    
+    <div className="relative z-10">
+      <h2 className="text-3xl font-black text-yellow-500 mb-8 flex items-center tracking-wider">
+        <History className="mr-3 w-8 h-8" /> 歷史鏡像：台南市長時期
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+        
+        <div className="flex flex-col justify-center items-center p-8 bg-black/40 rounded-xl border border-yellow-500/20 backdrop-blur-md hover:border-yellow-500/50 transition-all">
+          <span className="text-slate-400 text-sm mb-2 uppercase tracking-widest">拒絕進入議會紀錄</span>
+          <div className="flex items-baseline">
+            <span className="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-red-500 to-red-800 drop-shadow-[0_4px_10px_rgba(220,38,38,0.5)]">
+              {HISTORY_STATS.tainanDays}
+            </span>
+            <span className="text-2xl text-red-600 ml-2 font-bold">天</span>
+          </div>
+          <span className="text-xs text-slate-500 mt-4 bg-slate-900 px-3 py-1 rounded-full border border-slate-700">
+            2015/01/06 - 2015/08/28
+          </span>
+        </div>
 
-    .hTop{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap: 14px;
-      flex-wrap:wrap;
-    }
-    h1{
-      margin:0;
-      font-size: clamp(30px, 4.2vw, 54px);
-      letter-spacing: .9px;
-      line-height: 1.02;
-      text-shadow: 0 18px 50px rgba(0,0,0,.60);
-    }
-    .slogan{
-      margin: 10px 0 0;
-      color: var(--muted);
-      font-size: 15px;
-      line-height: 1.65;
-      max-width: 78ch;
-    }
-
-    .stamps{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      margin-top: 12px;
-    }
-    .stamp{
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      padding: 10px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.22);
-      backdrop-filter: blur(10px);
-      color: var(--muted);
-      font-size: 13px;
-      white-space:nowrap;
-    }
-    .stamp b{ color: var(--text); }
-
-    /* 右側：控制/版本區（像海報角落資訊） */
-    .corner{
-      border-radius: 22px;
-      padding: 16px;
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.16));
-      border: 1px solid rgba(255,255,255,.12);
-      display:flex;
-      flex-direction:column;
-      justify-content:space-between;
-      gap: 12px;
-    }
-
-    .cornerTop{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: 10px;
-      flex-wrap:wrap;
-    }
-    .cornerTitle{
-      display:flex;
-      align-items:center;
-      gap: 10px;
-      font-weight: 800;
-      letter-spacing:.2px;
-    }
-
-    .pill{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      padding: 10px 12px;
-      border-radius: 16px;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.06);
-      backdrop-filter: blur(10px);
-    }
-    .pill label{
-      font-size: 12px;
-      color: var(--muted2);
-      white-space:nowrap;
-    }
-    .pill input{
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--text);
-      background: transparent;
-      border: none;
-      outline:none;
-      width: 175px;
-    }
-    .btnRow{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-    }
-    .btn{
-      border:none;
-      cursor:pointer;
-      border-radius: 999px;
-      padding: 10px 14px;
-      font-weight: 900;
-      letter-spacing:.2px;
-      color:#07111E;
-      background: linear-gradient(135deg, var(--a1), var(--a2));
-      box-shadow: 0 14px 34px rgba(122,167,255,.22);
-    }
-    .btn:active{ transform: translateY(1px); }
-
-    .miniBadge{
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      padding: 10px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.22);
-      color: var(--muted2);
-      font-size: 12px;
-      font-family: var(--mono);
-      white-space:nowrap;
-    }
-
-    /* 主內容 */
-    .content{
-      padding: 18px 18px 20px;
-      display:grid;
-      grid-template-columns: 1.22fr .78fr;
-      gap: 16px;
-    }
-    @media (max-width: 980px){
-      .content{ grid-template-columns: 1fr; }
-    }
-
-    /* 左：三大主軸海報數字 */
-    .stack{
-      display:grid;
-      gap: 12px;
-    }
-    .panel{
-      border: 1px solid rgba(255,255,255,.12);
-      background: linear-gradient(135deg, rgba(0,0,0,.22), rgba(255,255,255,.05));
-      border-radius: var(--radius);
-      overflow:hidden;
-      position:relative;
-    }
-    .panel:before{
-      content:"";
-      position:absolute;
-      inset:-2px;
-      background:
-        radial-gradient(700px 220px at 10% 0%, rgba(124,255,203,.16), transparent 60%),
-        radial-gradient(640px 240px at 100% 10%, rgba(255,122,217,.16), transparent 55%),
-        radial-gradient(620px 260px at 50% 120%, rgba(122,167,255,.12), transparent 55%);
-      opacity:.95;
-      pointer-events:none;
-    }
-    .panel > *{ position:relative; z-index:1; }
-
-    .panelHead{
-      padding: 14px 14px 10px;
-      border-bottom: 1px solid rgba(255,255,255,.10);
-      display:flex;
-      justify-content:space-between;
-      gap: 12px;
-      flex-wrap:wrap;
-      align-items:flex-start;
-    }
-    .panelHead h2{
-      margin:0;
-      font-size: 15px;
-      line-height:1.35;
-      letter-spacing:.2px;
-      display:flex;
-      align-items:center;
-      gap: 10px;
-      max-width: 76ch;
-    }
-    .panelHead p{
-      margin:6px 0 0;
-      color: var(--muted);
-      font-size: 12.5px;
-      line-height: 1.55;
-      max-width: 84ch;
-    }
-    .since{
-      margin-left:auto;
-      text-align:right;
-      color: var(--muted2);
-      font-size: 12px;
-      font-family: var(--mono);
-      white-space:nowrap;
-    }
-
-    /* 海報大數字：霓虹 */
-    .mega{
-      padding: 12px 14px 14px;
-      display:grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-    }
-    @media (max-width: 560px){
-      .mega{ grid-template-columns: 1fr; }
-    }
-
-    .digit{
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.06);
-      padding: 12px 12px 10px;
-      display:flex;
-      align-items:baseline;
-      justify-content:space-between;
-      gap: 12px;
-      min-height: 82px;
-      position:relative;
-      overflow:hidden;
-    }
-    .digit:after{
-      content:"";
-      position:absolute;
-      inset:-2px;
-      background: radial-gradient(260px 90px at 30% 10%, rgba(255,210,122,.18), transparent 60%),
-                  radial-gradient(240px 90px at 90% 30%, rgba(122,167,255,.16), transparent 60%);
-      pointer-events:none;
-      opacity:.9;
-    }
-    .digit > *{ position:relative; z-index:1; }
-
-    .digit b{
-      font-family: var(--mono);
-      font-size: clamp(34px, 4vw, 54px);
-      letter-spacing: 1px;
-      line-height: 1;
-      text-shadow:
-        0 0 26px rgba(122,167,255,.24),
-        0 0 34px rgba(255,122,217,.14),
-        0 18px 60px rgba(0,0,0,.55);
-    }
-    .digit span{
-      color: var(--muted);
-      font-size: 12px;
-      letter-spacing:.3px;
-      padding-bottom: 6px;
-      white-space:nowrap;
-    }
-
-    /* 右：時間軸（海報感） */
-    .side{
-      display:grid;
-      gap: 12px;
-    }
-    .sideCard{
-      border: 1px solid rgba(255,255,255,.12);
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.18));
-      border-radius: var(--radius);
-      overflow:hidden;
-      box-shadow: 0 18px 46px rgba(0,0,0,.36);
-    }
-    .sideCardHead{
-      padding: 14px 14px 10px;
-      border-bottom: 1px solid rgba(255,255,255,.10);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: 10px;
-      flex-wrap:wrap;
-    }
-    .sideCardHead h3{
-      margin:0;
-      font-size: 14px;
-      display:flex;
-      align-items:center;
-      gap:10px;
-      letter-spacing:.2px;
-    }
-    .sideCardBody{ padding: 12px 14px 14px; }
-
-    .timeline{
-      margin:0;
-      padding:0;
-      list-style:none;
-      display:grid;
-      gap: 10px;
-      position:relative;
-    }
-    .timeline:before{
-      content:"";
-      position:absolute;
-      left: 11px;
-      top: 6px;
-      bottom: 6px;
-      width: 2px;
-      background: rgba(255,255,255,.14);
-    }
-    .tItem{
-      display:grid;
-      grid-template-columns: 26px 1fr;
-      gap: 10px;
-      align-items:flex-start;
-    }
-    .dot{
-      width: 24px;
-      height: 24px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: radial-gradient(circle at 30% 30%, rgba(124,255,203,.70), rgba(122,167,255,.15));
-      box-shadow: 0 0 26px rgba(122,167,255,.18);
-      margin-top: 2px;
-    }
-    .tText b{
-      display:block;
-      font-size: 13.5px;
-      letter-spacing:.2px;
-      line-height: 1.25;
-    }
-    .tText span{
-      display:block;
-      margin-top: 6px;
-      color: var(--muted);
-      font-size: 12.5px;
-      line-height: 1.55;
-    }
-    .tText em{
-      display:inline-block;
-      margin-top: 7px;
-      font-style:normal;
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--muted2);
-    }
-
-    .note{
-      color: var(--muted2);
-      font-size: 12px;
-      line-height: 1.7;
-      margin: 10px 0 0;
-    }
-    .note code{
-      font-family: var(--mono);
-      background: rgba(255,255,255,.07);
-      padding: 2px 6px;
-      border-radius: 8px;
-      border: 1px solid rgba(255,255,255,.10);
-    }
-
-    /* 媒體牆（海報證據格） */
-    .evidence{
-      margin-top: 16px;
-      padding: 0 18px 18px;
-    }
-    .eHead{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-end;
-      gap: 12px;
-      flex-wrap:wrap;
-      padding: 14px 4px 12px;
-    }
-    .eHead h3{
-      margin:0;
-      font-size: 16px;
-      letter-spacing:.2px;
-      display:flex;
-      align-items:center;
-      gap: 10px;
-    }
-
-    .mediaGrid{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    @media (max-width: 820px){
-      .mediaGrid{ grid-template-columns: 1fr; }
-    }
-    .embed{
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(0,0,0,.22);
-      border-radius: 18px;
-      overflow:hidden;
-      position:relative;
-      box-shadow: 0 18px 40px rgba(0,0,0,.35);
-      transform: translateY(8px);
-      opacity: 0;
-      transition: transform .7s cubic-bezier(.2,.9,.2,1), opacity .7s ease;
-    }
-    .embed.in{
-      transform: translateY(0);
-      opacity: 1;
-    }
-    .embed iframe{
-      width:100%;
-      aspect-ratio: 16/9;
-      border:0;
-      display:block;
-    }
-    .cap{
-      padding: 10px 12px 12px;
-      font-size: 12.5px;
-      color: var(--muted);
-      line-height: 1.55;
-      border-top: 1px solid rgba(255,255,255,.10);
-    }
-    .cap b{ color: var(--text); }
-
-    /* 對照清單（卡片牆） */
-    .list{
-      margin: 12px 0 0;
-      padding: 0;
-      list-style: none;
-      display:grid;
-      gap: 10px;
-    }
-    .li{
-      border:1px solid rgba(255,255,255,.12);
-      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(0,0,0,.20));
-      border-radius: 18px;
-      padding: 12px 14px;
-    }
-    .liTop{
-      display:flex;
-      justify-content:space-between;
-      gap: 10px;
-      flex-wrap:wrap;
-      align-items:flex-start;
-    }
-    .liTop b{ font-size: 14px; }
-    .tag{
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--muted2);
-      white-space:nowrap;
-    }
-    .li p{
-      margin: 8px 0 0;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.6;
-      word-break: break-word;
-    }
-    .li a{ color:#BFE3FF; text-decoration:none; border-bottom:1px dashed rgba(191,227,255,.35); }
-
-    /* 小插畫 */
-    .ico{ width: 22px; height: 22px; flex: 0 0 22px; filter: drop-shadow(0 6px 18px rgba(0,0,0,.35)); }
-
-    /* 滾動入場 */
-    .reveal{
-      transform: translateY(10px);
-      opacity: 0;
-      transition: transform .8s cubic-bezier(.2,.9,.2,1), opacity .8s ease;
-    }
-    .reveal.in{
-      transform: translateY(0);
-      opacity: 1;
-    }
-  </style>
-</head>
-
-<body>
-  <div class="aurora"></div>
-
-  <div class="wrap">
-    <div class="poster">
-      <header>
-        <div class="heroRow">
-          <!-- 左：海報主標 -->
-          <section class="headline reveal">
-            <div class="hTop">
-              <div>
-                <h1>市長不進議會，<br/>總統不進國會</h1>
-                <p class="slogan">
-                  以<strong>可核對日期</strong>作為起算點，做成「時間海報」：<br/>
-                  不是口水戰，是時間軸。不是印象，是計時器。
-                </p>
-
-                <div class="stamps">
-                  <div class="stamp" title="計時以台北時間為準">
-                    <span>🕰️</span> 時區：<b>亞洲/台北</b>
-                  </div>
-                  <div class="stamp" id="nowBadge">
-                    <span>⏳</span> 現在：<b>—</b>
-                  </div>
-                  <div class="stamp" id="versionStamp">
-                    <span>🧾</span> 版本：<b>—</b>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 角落插畫：國會穹頂 + 沙漏 -->
-              <svg class="ico" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="width:44px;height:44px">
-                <path d="M10 40c4-12 14-18 22-18s18 6 22 18" stroke="rgba(255,255,255,.70)" stroke-width="2"/>
-                <path d="M14 40h36v10H14V40Z" fill="rgba(122,167,255,.16)" stroke="rgba(255,255,255,.60)" stroke-width="2"/>
-                <path d="M26 22h12v6c0 4-3 6-6 8-3-2-6-4-6-8v-6Z" fill="rgba(255,122,217,.18)" stroke="rgba(255,255,255,.55)" stroke-width="2"/>
-                <circle cx="52" cy="14" r="2.2" fill="rgba(255,210,122,.85)"/>
-              </svg>
+        <div className="space-y-6">
+          <div className="flex items-start">
+            <div className="bg-red-900/20 p-2 rounded mr-4">
+              <Scale className="w-6 h-6 text-red-500" />
             </div>
-          </section>
-
-          <!-- 右：像海報角落資訊的控制/版本 -->
-          <aside class="corner reveal">
-            <div class="cornerTop">
-              <div class="cornerTitle">
-                <!-- 小插畫：羅盤 -->
-                <svg class="ico" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-                  <circle cx="32" cy="32" r="22" stroke="rgba(255,255,255,.75)" stroke-width="2"/>
-                  <path d="M32 18v28" stroke="rgba(255,255,255,.35)" stroke-width="2"/>
-                  <path d="M18 32h28" stroke="rgba(255,255,255,.35)" stroke-width="2"/>
-                  <path d="M32 24l8 8-8 8-8-8 8-8Z" fill="rgba(124,255,203,.22)" stroke="rgba(255,255,255,.75)" stroke-width="2"/>
-                </svg>
-                海報設定
-              </div>
-              <span class="miniBadge" title="留空＝即時計時">即時/指定日期</span>
+            <div>
+              <h4 className="text-white font-bold text-lg">監察院彈劾</h4>
+              <p className="text-slate-400 text-sm mt-1 leading-relaxed">
+                2015年監察院認定其「首開地方自治史上官員集體不進議會惡例」，違法失職，通過彈劾。
+              </p>
             </div>
-
-            <div class="pill">
-              <label for="asof">計到哪一天</label>
-              <input id="asof" placeholder="留空＝現在（台北）" />
+          </div>
+          
+          <div className="flex items-start">
+            <div className="bg-red-900/20 p-2 rounded mr-4">
+              <Gavel className="w-6 h-6 text-red-500" />
             </div>
-
-            <div class="btnRow">
-              <button class="btn" id="apply">套用</button>
-              <span class="miniBadge" id="modeBadge">模式：即時</span>
+            <div>
+              <h4 className="text-white font-bold text-lg">公懲會處分</h4>
+              <p className="text-slate-400 text-sm mt-1 leading-relaxed">
+                遭移送司法院公務員懲戒委員會，最終被記申誡。此為法院認證之「違法」。
+              </p>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
-            <p class="note">
-              你要改起算點：搜尋 <code>ANCHORS</code>，改 <code>start</code>。<br/>
-              日期格式建議：<code>YYYY-MM-DDTHH:mm:ss+08:00</code>
+const VideoEvidence = () => (
+  <div className="mb-20">
+    <div className="flex items-center mb-8">
+      <div className="w-2 h-8 bg-blue-500 mr-4"></div>
+      <h2 className="text-3xl font-black text-white tracking-wide">
+        凡走過必留下痕跡 <span className="text-blue-500 text-lg font-normal ml-2">// 2024 總統辯論會存證</span>
+      </h2>
+    </div>
+    
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+      <div className="lg:col-span-3 bg-black rounded-xl overflow-hidden shadow-2xl border border-slate-800 relative group">
+        <div className="aspect-video w-full">
+             <iframe 
+                width="100%" 
+                height="100%" 
+                src="https://www.youtube.com/embed/kR9rLzZ-zYk?start=5712" 
+                title="賴清德辯論會發言" 
+                frameBorder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowFullScreen
+                className="opacity-90 group-hover:opacity-100 transition-opacity"
+            ></iframe>
+        </div>
+      </div>
+
+      <div className="lg:col-span-2 flex flex-col justify-center space-y-6">
+        <div className="bg-slate-800/80 p-6 rounded-xl border-l-4 border-blue-500 backdrop-blur">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-white font-bold text-xl">2023 選前</h3>
+            <span className="text-xs bg-blue-900 text-blue-200 px-2 py-1 rounded">為了選票</span>
+          </div>
+          <p className="text-blue-200 text-lg italic leading-relaxed font-serif">
+            「依據憲法，總統有義務接受立法院的國情咨詢...如果不去，那才是失職。」
+          </p>
+        </div>
+        
+        <div className="flex justify-center py-2">
+            <ArrowRight className="text-slate-600 w-8 h-8 rotate-90 md:rotate-0" />
+        </div>
+        
+        <div className="bg-slate-800/80 p-6 rounded-xl border-l-4 border-red-500 backdrop-blur">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-white font-bold text-xl">2024-25 選後</h3>
+            <span className="text-xs bg-red-900 text-red-200 px-2 py-1 rounded">為了權力</span>
+          </div>
+          <p className="text-red-200 text-lg italic leading-relaxed font-serif">
+            「立法院邀請總統即問即答是違憲...總統不應成為國會擴權的背書者。」
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const ContradictionWall = () => (
+  <div className="relative">
+    <div className="text-center mb-16">
+      <span className="text-red-500 font-bold tracking-[0.3em] text-sm uppercase mb-2 block">FACTS CHECK</span>
+      <h2 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tighter">
+        矛盾言行回顧錄：15大爭議
+      </h2>
+      <div className="w-24 h-1 bg-red-600 mx-auto"></div>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {CONTRADICTIONS.map((item, index) => (
+        <div key={index} className="bg-[#1a1d24] rounded-lg p-0 hover:bg-[#20232a] transition-all duration-300 border border-slate-800 hover:border-red-500/40 group overflow-hidden flex flex-col h-full shadow-lg">
+          <div className="p-5 flex-grow">
+            <div className="flex justify-between items-start mb-4">
+              <span className="bg-red-950/40 text-red-400 text-[10px] px-2 py-1 rounded border border-red-900/50 uppercase tracking-wider font-bold">
+                {item.tag}
+              </span>
+              <span className="text-[10px] text-slate-500 font-mono flex items-center bg-black/30 px-2 py-1 rounded">
+                <BookOpen className="w-3 h-3 mr-1" /> {item.source}
+              </span>
+            </div>
+            
+            <h3 className="text-lg font-bold text-slate-100 mb-3 group-hover:text-red-400 transition-colors leading-tight">
+              {item.title}
+            </h3>
+            
+            <p className="text-slate-400 text-sm leading-relaxed mb-4 border-l-2 border-slate-700 pl-3">
+              {item.content}
             </p>
-          </aside>
+          </div>
+          
+          <div className="bg-black/40 p-4 border-t border-slate-800/50 mt-auto">
+            <div className="flex items-start">
+              <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 mr-2 flex-shrink-0" />
+              <div>
+                <span className="text-xs text-yellow-500 font-bold block mb-1">荒謬與矛盾點：</span>
+                <p className="text-xs text-slate-400 leading-normal">{item.reason}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+export default function App() {
+  return (
+    <div className="min-h-screen bg-[#050505] text-slate-200 font-sans selection:bg-red-900 selection:text-white pb-20 overflow-x-hidden">
+      
+      {/* Background Ambience */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-red-900/10 rounded-full blur-[128px]"></div>
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-yellow-900/5 rounded-full blur-[128px]"></div>
+      </div>
+
+      {/* Hero Section */}
+      <header className="relative pt-24 pb-20 px-4 z-10">
+        <div className="max-w-7xl mx-auto text-center">
+          <div className="inline-flex items-center mb-6 px-4 py-1.5 border border-red-500/30 rounded-full bg-red-950/20 backdrop-blur-md animate-fade-in-up">
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse mr-2"></div>
+            <span className="text-red-400 text-xs font-bold tracking-[0.2em]">憲政危機即時監測 V3.0</span>
+          </div>
+          
+          <h1 className="text-5xl md:text-8xl font-black text-white mb-8 tracking-tighter drop-shadow-2xl leading-[1.1]">
+            市長不進議會<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-red-500 to-yellow-500 relative">
+              總統不進國會
+            </span>
+          </h1>
+          
+          <p className="text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed font-light">
+            權力的傲慢是民主最大的腐蝕劑。<br/>
+            本儀表板詳實記錄從地方到中央，一貫的逃避監督模式、預算黑箱與憲政爭議。
+          </p>
         </div>
       </header>
 
-      <!-- 主內容 -->
-      <section class="content">
-        <!-- 左：三大主軸 -->
-        <div class="stack" id="timerStack"></div>
-
-        <!-- 右：時間軸 + 歷史對照 -->
-        <div class="side">
-          <div class="sideCard reveal">
-            <div class="sideCardHead">
-              <h3>
-                <svg class="ico" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-                  <path d="M14 14h36v36H14V14Z" stroke="rgba(255,255,255,.70)" stroke-width="2"/>
-                  <path d="M20 26h24M20 34h24M20 42h18" stroke="rgba(255,255,255,.35)" stroke-width="2"/>
-                  <circle cx="22" cy="20" r="2" fill="rgba(255,210,122,.85)"/>
-                </svg>
-                對照時間軸
-              </h3>
-              <span class="miniBadge">一眼看懂</span>
-            </div>
-            <div class="sideCardBody">
-              <ul class="timeline" id="timeline"></ul>
-              <p class="note">
-                這裡用「可核對日期」當錨點，避免被挑戰。
-              </p>
-            </div>
+      <main className="max-w-7xl mx-auto px-4 space-y-24 relative z-10">
+        
+        {/* Live Timers */}
+        <section className="-mt-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {CRITICAL_EVENTS.map(event => (
+              <TimerCard key={event.id} event={event} />
+            ))}
           </div>
+        </section>
 
-          <div class="sideCard reveal">
-            <div class="sideCardHead">
-              <h3>
-                <svg class="ico" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-                  <path d="M14 44l20-20 6 6-20 20H14v-6Z" fill="rgba(255,210,122,.18)" stroke="rgba(255,255,255,.80)" stroke-width="2"/>
-                  <path d="M34 16l10-10 10 10-10 10-10-10Z" fill="rgba(124,255,203,.14)" stroke="rgba(255,255,255,.80)" stroke-width="2"/>
-                  <path d="M10 56h44" stroke="rgba(255,255,255,.35)" stroke-width="2"/>
-                </svg>
-                歷史尺度（台南市長）
-              </h3>
-              <span class="miniBadge">對照用</span>
-            </div>
-            <div class="sideCardBody">
-              <p class="note" style="margin-top:0">
-                常見說法：不進台南市議會「約 234 天」。<br/>
-                監察院曾就「拒不列席議會」通過彈劾案；後續公懲會議決申誡（以官方/新聞來源可核對）。
-              </p>
-              <div class="miniBadge" style="margin-top:10px">彈劾：至少 1 案（申誡）</div>
-            </div>
+        {/* Defense Budget Deep Dive (New Section) */}
+        <section>
+          <DefenseBudgetDeepDive />
+        </section>
+
+        {/* History Contrast */}
+        <section>
+          <HistorySection />
+        </section>
+
+        {/* Video Evidence */}
+        <section>
+          <VideoEvidence />
+        </section>
+
+        {/* The List 15 Items */}
+        <section>
+          <ContradictionWall />
+        </section>
+
+      </main>
+
+      <footer className="mt-24 border-t border-slate-900 py-12 text-center relative z-10 bg-[#050505]">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="flex items-center space-x-2 text-red-500/80">
+            <Clock className="w-4 h-4" />
+            <span className="text-sm font-mono tracking-widest">SYSTEM TIME: 2025/12/28</span>
           </div>
+          <p className="text-xs text-slate-700 max-w-lg mx-auto leading-relaxed">
+            * 本網站內容基於公開新聞報導、立法院公報與歷史紀錄整理。<br/>
+            旨在呈現憲政運作之現況與歷史對照，僅供公民監督參考。
+          </p>
         </div>
-      </section>
-
-      <!-- 證據牆：影片 -->
-      <section class="evidence">
-        <div class="eHead">
-          <h3 class="reveal">
-            <svg class="ico" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-              <path d="M10 18h18l8 12-8 12H10l8-12-8-12Z" fill="rgba(122,167,255,.18)" stroke="rgba(255,255,255,.78)" stroke-width="2"/>
-              <path d="M36 22h14M36 30h18M36 38h14" stroke="rgba(255,255,255,.35)" stroke-width="2"/>
-              <circle cx="55" cy="30" r="3" fill="rgba(255,122,217,.55)"/>
-            </svg>
-            影片證據牆（可替換連結）
-          </h3>
-          <div class="miniBadge reveal">嵌入 YouTube</div>
-        </div>
-
-        <div class="mediaGrid">
-          <div class="embed" data-reveal>
-            <iframe
-              src="https://www.youtube.com/embed/dl-4DWDC6Tg"
-              title="拒入234天 賴清德今重返議會報告（新聞片段）"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowfullscreen></iframe>
-            <div class="cap"><b>台南市長時期：</b>「拒入 234 天」新聞片段（你可換成更權威來源）。</div>
-          </div>
-
-          <div class="embed" data-reveal>
-            <iframe
-              src="https://www.youtube.com/embed/iGhD3Ez606g"
-              title="總統府：院際國政茶敘後錄影談話"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowfullscreen></iframe>
-            <div class="cap"><b>總統府官方：</b>院際國政茶敘後錄影談話（你可換成你指定版本）。</div>
-          </div>
-
-          <div class="embed" data-reveal>
-            <iframe
-              src="https://www.youtube.com/embed/dZ39t70vXsY"
-              title="若合憲責無旁貸：赴立院國情報告（新聞片段）"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowfullscreen></iframe>
-            <div class="cap"><b>國情諮詢相關：</b>常被拿來做「承諾 vs 現況」對照（建議加逐字稿更硬）。</div>
-          </div>
-
-          <div class="embed" data-reveal>
-            <iframe
-              src="https://www.youtube.com/embed/-3XrTvwFOwc"
-              title="辯論/政見會：國情諮詢義務（新聞整理）"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowfullscreen></iframe>
-            <div class="cap"><b>辯論/政見會素材：</b>你可改放完整版辯論（可信度更高）。</div>
-          </div>
-        </div>
-
-        <!-- 底部：對照清單 -->
-        <div class="eHead" style="margin-top:14px">
-          <h3 class="reveal">
-            <svg class="ico" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-              <path d="M12 18c0-4 3-7 7-7h26c4 0 7 3 7 7v14c0 4-3 7-7 7H28l-10 8v-8h- -? "></path>
-            </svg>
-            言行對照清單（示範版：可改）
-          </h3>
-          <div class="miniBadge reveal">至少 10 則</div>
-        </div>
-        <ul class="list" id="contrastList"></ul>
-
-        <p class="note reveal" style="margin-top:12px">
-          ✅ 小提醒：想讓這頁「更硬」——請把每一則都補上「日期＋逐字稿/官方新聞稿」連結。<br/>
-          你若要我把清單擴到 2025/12/28 前的完整版本，我可以用「可查證來源」方式幫你整理成更完整資料庫式卡片。
-        </p>
-      </section>
+      </footer>
     </div>
-  </div>
-
-<script>
-  /**
-   * =========================
-   * 海報版：設定區
-   * =========================
-   * 你要改起算點：改 ANCHORS 的 start
-   */
-
-  // 版本號（顯示在海報角落）：你每次改版可以改這行
-  const VERSION = "2026/01/15 海報版 v1";
-
-  const ANCHORS = [
-    {
-      id: "impeach",
-      title: "賴清德被提出彈劾後，已經過了",
-      desc: "起算點：彈劾案時程公開（你可改成更精確的『正式提案日』）。",
-      start: "2025-12-26T12:00:00+08:00",
-      icon: "⚖️"
-    },
-    {
-      id: "defense_no_report",
-      title: "投書華郵並宣布 1.25 兆國防特別預算後，未到立法院專案報告已經",
-      desc: "起算點：宣布 1.25 兆特別預算之日（可核對）。",
-      start: "2025-11-26T11:30:00+08:00",
-      icon: "🛡️"
-    },
-    {
-      id: "since_inaug",
-      title: "自 2024/05/20 就職總統以來，未赴立法院進行國情諮詢已經",
-      desc: "起算點：總統宣誓就職（2024/05/20）。",
-      start: "2024-05-20T09:00:00+08:00",
-      icon: "🏛️"
-    },
-  ];
-
-  // 右側時間軸（可以自由增刪）
-  const TIMELINE = [
-    { date: "2024/05/20", title: "就職總統", sub: "作為『國情諮詢』討論的時間起點。"},
-    { date: "2025/11/25", title: "華郵投書刊登", sub: "對外論述國防與政策方向的節點。"},
-    { date: "2025/11/26", title: "宣布 1.25 兆國防特別預算", sub: "引發立院監督/溝通焦點的節點。"},
-    { date: "2025/12/26", title: "彈劾案時程公開", sub: "政治程序攻防正式進入公開時程。"},
-    { date: "（今天）", title: "時間持續累積中", sub: "海報會自動計時更新。"},
-  ];
-
-  // 對照清單（示範 10 則；你可把 link 換成你要的來源）
-  const CONTRAST = [
-    {
-      tag: "2023/12/30",
-      title: "「總統有義務應立院要求到國會國情報告」的選前說法 vs 後續制度爭議",
-      why: "同一議題後續常被拆成『是否赴立院』與『如何合憲設計』兩部分，支持者/批評者對其一致性解讀不同。",
-      link: "https://tfc-taiwan.org.tw/migration_article_105973_10083/"
-    },
-    {
-      tag: "2024/07/11",
-      title: "「願到國會」的政治承諾 vs 「即問即答」修法是否違憲的爭論",
-      why: "後續攻防中常出現『把制度合憲性』與『是否履行承諾』混在一起討論的現象。",
-      link: "https://tfc-taiwan.org.tw/migration_article_105454_10794/"
-    },
-    {
-      tag: "2025/11/25",
-      title: "華郵投書節點 vs 國內對軍購/特別預算的監督期待",
-      why: "對外與對內的溝通節奏不同，容易形成『對外講得快、對內說明慢』的批評。",
-      link: "https://english.president.gov.tw/News/7047"
-    },
-    {
-      tag: "2025/11/26",
-      title: "宣布 1.25 兆國防特別預算 vs 立院審議攻防",
-      why: "政策提出後仍需走程序；爭點常聚焦在『溝通透明度』與『監督機制』。",
-      link: "https://www.taiwantoday.tw/Politics/Top-News/278281/President-Lai-announces-NT%25241.25-trillion-in-special-defense-spending"
-    },
-    {
-      tag: "2025/12/15",
-      title: "強烈政治用語（如對立法行為的批評） vs 同時表示『願依合憲方式』互動",
-      why: "同一份談話可能同時呈現『強硬表述』與『程序式表態』，外界對一致性評價分歧。",
-      link: "https://www.president.gov.tw/News/39712"
-    },
-    {
-      tag: "2015/08/04",
-      title: "台南市長拒列席議會：監察院彈劾（官方紀錄）",
-      why: "官方文件可核對，常作為『市長不進議會』對照尺度。",
-      link: "https://www.cy.gov.tw/News_Content.aspx?n=124&s=7400&sms=8912"
-    },
-    {
-      tag: "2015/08/25",
-      title: "彈劾案文公告（監察院）",
-      why: "與新聞報導相比，案文更能降低『被說沒根據』的風險。",
-      link: "https://www.cy.gov.tw/News_Content.aspx?n=129&s=7889&sms=8912"
-    },
-    {
-      tag: "2015/10/30",
-      title: "公懲會議決申誡（制度後果）",
-      why: "作為具體後果，常被拿來做『尺度對照』。",
-      link: "https://www.cna.com.tw/news/firstnews/201510305014.aspx"
-    },
-    {
-      tag: "2024/05/20",
-      title: "就職後談合作/溝通 vs 後續院際衝突升高",
-      why: "就職宣示與政治現實衝突，容易被批評『落差』。",
-      link: "https://www.president.gov.tw/News/28424"
-    },
-    {
-      tag: "2025/03/13",
-      title: "國安與法制政策方向引發的爭議（示例：軍事審判等）",
-      why: "在安全與法治平衡上，不同立場會認為是『必要』或『轉向』，可做『立場變化』討論素材。",
-      link: "https://udn.com/news/story/124413/8605575"
-    },
-  ];
-
-  function toDate(value){
-    if(!value) return null;
-    const v = value.trim();
-    if(!v) return null;
-
-    const m = v.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}))?$/);
-    if(m){
-      const [_,Y,M,D,hh="00",mm="00"] = m;
-      return new Date(`${Y}-${M}-${D}T${hh}:${mm}:00+08:00`);
-    }
-    const d = new Date(v);
-    return isNaN(d.getTime()) ? null : d;
-  }
-
-  function diffParts(start, end){
-    let ms = end - start;
-    const sign = ms < 0 ? -1 : 1;
-    ms = Math.abs(ms);
-
-    const totalMin = Math.floor(ms / 60000);
-    const days = Math.floor(totalMin / (60*24));
-    const hours = Math.floor((totalMin - days*60*24) / 60);
-    const mins = totalMin - days*60*24 - hours*60;
-    return { sign, days, hours, mins };
-  }
-
-  function fmt2(n){ return String(n).padStart(2,"0"); }
-
-  function renderTimers(now){
-    const stack = document.getElementById("timerStack");
-    stack.innerHTML = "";
-
-    ANCHORS.forEach(a=>{
-      const start = new Date(a.start);
-      const { sign, days, hours, mins } = diffParts(start, now);
-
-      const panel = document.createElement("article");
-      panel.className = "panel reveal";
-
-      panel.innerHTML = `
-        <div class="panelHead">
-          <div style="min-width:min(760px,100%)">
-            <h2><span style="font-size:18px">${a.icon}</span> ${a.title}</h2>
-            <p>${a.desc}</p>
-          </div>
-          <div class="since" title="起算點（可在程式內修改）">
-            起算：${start.toLocaleString("zh-TW", { timeZone: "Asia/Taipei", hour12:false })}
-          </div>
-        </div>
-
-        <div class="mega">
-          <div class="digit"><b>${sign<0?"-":""}${days}</b><span>天</span></div>
-          <div class="digit"><b>${fmt2(hours)}</b><span>小時</span></div>
-          <div class="digit"><b>${fmt2(mins)}</b><span>分鐘</span></div>
-        </div>
-      `;
-      stack.appendChild(panel);
-    });
-
-    // 重新觸發 reveal
-    requestAnimationFrame(()=> observeReveal());
-  }
-
-  function renderTimeline(){
-    const ul = document.getElementById("timeline");
-    ul.innerHTML = "";
-    TIMELINE.forEach(t=>{
-      const li = document.createElement("li");
-      li.className = "tItem";
-      li.innerHTML = `
-        <div class="dot" aria-hidden="true"></div>
-        <div class="tText">
-          <b>${t.title}</b>
-          <span>${t.sub}</span>
-          <em>${t.date}</em>
-        </div>
-      `;
-      ul.appendChild(li);
-    });
-  }
-
-  function renderContrast(){
-    const ul = document.getElementById("contrastList");
-    ul.innerHTML = "";
-    CONTRAST.forEach((c, idx)=>{
-      const li = document.createElement("li");
-      li.className = "li reveal";
-      li.innerHTML = `
-        <div class="liTop">
-          <b>${idx+1}. ${c.title}</b>
-          <span class="tag">${c.tag}</span>
-        </div>
-        <p>${c.why}<br/>來源：<a href="${c.link}" target="_blank" rel="noreferrer noopener">${c.link}</a></p>
-      `;
-      ul.appendChild(li);
-    });
-
-    requestAnimationFrame(()=> observeReveal());
-  }
-
-  function updateBadges(now){
-    const nowBadge = document.getElementById("nowBadge");
-    nowBadge.innerHTML = `<span>⏳</span> 現在：<b>${now.toLocaleString("zh-TW", { timeZone:"Asia/Taipei", hour12:false })}</b>`;
-
-    const ver = document.getElementById("versionStamp");
-    ver.innerHTML = `<span>🧾</span> 版本：<b>${VERSION}</b>`;
-  }
-
-  function getNow(asOfInput){
-    const d = toDate(asOfInput);
-    return d ?? new Date();
-  }
-
-  // 滾動入場：IntersectionObserver
-  let io;
-  function observeReveal(){
-    if(io) io.disconnect();
-    io = new IntersectionObserver((entries)=>{
-      entries.forEach(e=>{
-        if(e.isIntersecting){
-          e.target.classList.add("in");
-          io.unobserve(e.target);
-        }
-      });
-    }, { threshold: .12 });
-
-    document.querySelectorAll(".reveal:not(.in)").forEach(el=> io.observe(el));
-
-    // 影片卡片用 data-reveal
-    document.querySelectorAll("[data-reveal].embed:not(.in)").forEach(el=>{
-      io.observe(el);
-      el.classList.add("reveal"); // 共用動畫
-    });
-  }
-
-  function boot(){
-    renderTimeline();
-    renderContrast();
-
-    const asof = document.getElementById("asof");
-    const apply = document.getElementById("apply");
-    const modeBadge = document.getElementById("modeBadge");
-
-    let now = getNow(asof.value);
-    updateBadges(now);
-    renderTimers(now);
-
-    apply.addEventListener("click", ()=>{
-      const d = toDate(asof.value);
-      if(d === null && asof.value.trim()){
-        alert("你輸入的日期格式無法解析。\n建議：2025-12-28 或 2025-12-28 12:00 或 ISO 格式。");
-        return;
-      }
-      now = getNow(asof.value);
-      updateBadges(now);
-      renderTimers(now);
-
-      modeBadge.textContent = asof.value.trim() ? "模式：指定日期" : "模式：即時";
-    });
-
-    // 即時模式：每 30 秒刷新
-    setInterval(()=>{
-      if(asof.value.trim()) return;
-      now = new Date();
-      updateBadges(now);
-      renderTimers(now);
-      modeBadge.textContent = "模式：即時";
-    }, 30000);
-
-    observeReveal();
-  }
-
-  boot();
-</script>
-</body>
-</html>
+  );
+}
