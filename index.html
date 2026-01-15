@@ -1,501 +1,450 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  AlertTriangle, Clock, History, Gavel, ShieldAlert, XCircle, 
-  ArrowRight, Flame, Scale, FileText, Megaphone, DollarSign, 
-  Stethoscope, BookOpen, ExternalLink 
-} from 'lucide-react';
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>市長不進議會，總統不進國會</title>
+  <meta name="description" content="以可核對日期為起算點的時間海報：市長不進議會，總統不進國會。" />
+  <meta property="og:title" content="市長不進議會，總統不進國會" />
+  <meta property="og:description" content="以可核對日期為起算點的時間海報。" />
+  <meta property="og:type" content="website" />
+  <meta name="color-scheme" content="dark light" />
 
-// --- Data & Content ---
+  <style>
+    :root{
+      --bg0:#05060A;
+      --bg1:#0A0E1A;
+      --text:#F4F7FF;
+      --muted: rgba(244,247,255,.74);
+      --muted2: rgba(244,247,255,.58);
+      --line: rgba(255,255,255,.14);
 
-const CRITICAL_EVENTS = [
-  {
-    id: 1,
-    title: "賴清德被提出彈劾已過",
-    targetDate: "2025-12-18T09:00:00",
-    description: "2025/12/18 藍白聯手啟動彈劾程序",
-    icon: <Gavel className="w-8 h-8 text-red-500" />,
-    color: "from-red-950 to-red-900",
-    textColor: "text-red-400"
-  },
-  {
-    id: 2,
-    title: "國防預算未報告天數",
-    targetDate: "2025-11-26T06:49:00", 
-    description: "2025/11/26 投書外媒宣布預算後神隱",
-    icon: <ShieldAlert className="w-8 h-8 text-yellow-500" />,
-    color: "from-yellow-950 to-yellow-900",
-    textColor: "text-yellow-400"
-  },
-  {
-    id: 3,
-    title: "就職以來未赴立院國情咨詢",
-    targetDate: "2024-05-20T09:00:00",
-    description: "2024/05/20 宣誓就職總統至今",
-    icon: <XCircle className="w-8 h-8 text-orange-500" />,
-    color: "from-orange-950 to-orange-900",
-    textColor: "text-orange-400"
-  }
-];
+      --a1:#7CFFCB; /* 清亮綠 */
+      --a2:#7AA7FF; /* 星光藍 */
+      --a3:#FF7AD9; /* 霓虹粉 */
+      --a4:#FFD27A; /* 金色 */
+      --danger:#FF5D6C;
 
-const HISTORY_STATS = {
-  tainanDays: 232,
-  impeachCount: 1,
-  title: "台南市長任內歷史紀錄",
-  subtitle: "民主憲政史上的惡例"
-};
+      --shadow: 0 22px 70px rgba(0,0,0,.55);
+      --glow: 0 0 60px rgba(122,167,255,.20);
 
-const CONTRADICTIONS = [
-  {
-    title: "洗牙順便拉票：醫療專業政治化",
-    date: "2025 近期發言",
-    source: "牙醫師公會晚宴致詞",
-    content: "公開要求牙醫師在幫病患洗牙時，若聽到病患支持在野黨，就要以此機會「遊說」對方支持預算。",
-    reason: "職業道德淪喪：將神聖的醫療行為當作政治勒索的工具，侵犯病患隱私與醫病關係，極度不適當。",
-    tag: "失言"
-  },
-  {
-    title: "自創憲法：預算必過論",
-    date: "2025/12",
-    source: "民進黨中常會下令",
-    content: "聲稱「憲法規定立法院必須在年底前通過總預算」，若不通過就是違憲。",
-    reason: "曲解憲法：憲法僅規範行政院有提案權，立法院有審議與刪減權。若「必須通過」，立法院將淪為行政院轄下的立法局，此說法完全無視權力分立原則。",
-    tag: "違憲亂政"
-  },
-  {
-    title: "國防預算：出口轉內銷",
-    date: "2025/11",
-    source: "華盛頓郵報投書 / 國防預算案",
-    content: "1.25兆鉅額特別預算，竟是先投書美國《華盛頓郵報》承諾，才回頭告知國內民眾與國會。",
-    reason: "藐視國會：重大國家資源分配，應先循國內民主程序溝通，而非先向外國承諾以施壓國內，本末倒置。",
-    tag: "喪權辱國"
-  },
-  {
-    title: "空白授權：幾張PPT要一兆",
-    date: "2025 預算會期",
-    source: "立法院預算審查報告",
-    content: "高達1.25兆的潛艦與軍購預算，國防部僅提供極其簡陋的投影片說明，且總統拒絕赴立院說明細節。",
-    reason: "財政紀律崩壞：人民血汗錢不是空白支票，拒絕說明細節卻要求照單全收，是典型的獨裁者心態。",
-    tag: "財政黑箱"
-  },
-  {
-    title: "選擇性執法：拒絕執行軍人加薪",
-    date: "2025",
-    source: "立法院決議案",
-    content: "立法院三讀通過「軍人待遇條例修正案」（加薪與津貼），行政院卻以「預算權」為由拒不執行，也不副署。",
-    reason: "邏輯錯亂：口口聲聲說要強化國防、照顧軍人，卻親手擋下軍人加薪法案，證明所謂「抗中保台」只是口號，鬥爭在野黨才是真。",
-    tag: "行政怠惰"
-  },
-  {
-    title: "大罷免慘敗：32比0的民意",
-    date: "2025",
-    source: "基隆/新竹罷免案結果",
-    content: "發動全台大罷免試圖翻轉國會少數劣勢，結果遭遇 32:0 歷史性慘敗，卻仍指責在野黨不知檢討。",
-    reason: "缺乏反省：民意已透過選票明確拒絕政治惡鬥，執政者卻解讀為在野黨的錯，展現極致的雙重標準。",
-    tag: "政治惡鬥"
-  },
-  {
-    title: "國情咨詢：義務變違憲",
-    date: "2023 vs 2024",
-    source: "2024總統辯論會 vs 釋憲聲請書",
-    content: "選前辯論時強調「總統有義務應立法院要求到國會進行國情咨詢」，當選後卻透過釋憲將其解釋為「違憲」。",
-    reason: "誠信破產：為了逃避監督，不惜推翻自己選前的憲法承諾，視誠信為無物。",
-    tag: "髮夾彎"
-  },
-  {
-    title: "在野獨裁：世界政治笑話",
-    date: "2024-2025",
-    source: "總統府發言人聲明",
-    content: "指控國會多數黨是「民主獨裁」。",
-    reason: "邏輯死亡：獨裁必須掌握軍隊、警察、行政權與媒體。在野黨無一在手，如何獨裁？此說法違背基礎政治學常識。",
-    tag: "認知作戰"
-  },
-  {
-    title: "中華民國：災難說",
-    date: "2023/12/30",
-    source: "總統辯論會",
-    content: "脫口而出「把中華民國當作兩岸的護國神山...是要給台灣帶來災難？」",
-    reason: "國家定位錯亂：身為中華民國總統，卻視國號為災難，卻又依據此憲法宣誓就職，精神分裂。",
-    tag: "失言"
-  },
-  {
-    title: "違建爭議：賴皮寮信託",
-    date: "2023-2024",
-    source: "萬里老家爭議",
-    content: "萬里老家違建爭議，堅持是「礦工工寮」並以公益信託解套，未如一般民眾面臨即報即拆。",
-    reason: "特權階級：對照台南市長任內強硬拆遷南鐵東移，對自己老家違建卻極力護航，嚴以律人寬以待己。",
-    tag: "雙標"
-  },
-  {
-    title: "非核家園 vs 緊急使用",
-    date: "2023-2025",
-    source: "能源政策記者會",
-    content: "堅守非核家園神主牌，導致能源政策僵化，卻又鬆口「緊急時刻可重啟核能」。",
-    reason: "騙術：核能重啟需繁雜安檢，非按鈕即亮，「緊急使用」在實務上不可行，純粹話術欺騙。",
-    tag: "能源跳票"
-  },
-  {
-    title: "議會備詢：市長不進，總統不來",
-    date: "2015 vs 2024",
-    source: "台南市議會紀錄 / 立法院公報",
-    content: "2015年以議長涉賄為由拒進議會232天；如今以違憲為由拒進立院。",
-    reason: "慣性逃避：無論地方或中央，只要遇阻力即癱瘓議事運作，視民主監督程序為無物。",
-    tag: "藐視民主"
-  },
-  {
-    title: "功德說：低薪當作做善事",
-    date: "2017",
-    source: "行政院長任內發言",
-    content: "勉勵照服員薪水低（3萬元）當作是「做功德」。",
-    reason: "晉惠帝心態：將政府應解決的低薪結構問題，轉嫁為勞工的道德勒索。",
-    tag: "慣老闆"
-  },
-  {
-    title: "乾淨的煤：反智言論",
-    date: "2018",
-    source: "深澳電廠爭議",
-    content: "稱深澳電廠使用的是「乾淨的煤」，排放污染量與天然氣差不多。",
-    reason: "指鹿為馬：燃煤發電本質上即無法達到天然氣的潔淨度，為了政策護航不惜違反科學常識。",
-    tag: "反科學"
-  },
-  {
-    title: "信賴司法 vs 攻擊司法",
-    date: "2024-2025",
-    source: "柯文哲案 vs 鄭文燦案",
-    content: "對在野黨案件高喊「尊重司法、勿枉勿縱」，對自己黨內或不利判決則暗示司法不公或透過側翼攻擊。",
-    reason: "司法工具化：司法在眼中只是鬥爭工具，順我者昌，逆我者亡。",
-    tag: "法治雙標"
-  }
-];
+      --radius: 22px;
+      --radius2: 30px;
 
-// --- Components ---
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    }
 
-const TimerCard = ({ event }) => {
-  const [time, setTime] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      background:
+        radial-gradient(1100px 720px at 20% -10%, rgba(122,167,255,.30), transparent 60%),
+        radial-gradient(900px 650px at 105% 5%, rgba(255,122,217,.24), transparent 56%),
+        radial-gradient(900px 650px at 55% 115%, rgba(124,255,203,.16), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1) 55%, #04050A);
+      overflow-x:hidden;
+      min-height:100vh;
+    }
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date(); 
-      const start = new Date(event.targetDate);
-      const diff = now - start;
+    .aurora{
+      position: fixed;
+      inset: -30vh -20vw;
+      pointer-events:none;
+      opacity:.62;
+      filter: blur(26px);
+      mix-blend-mode: screen;
+      background:
+        conic-gradient(from 220deg,
+          rgba(122,167,255,.00),
+          rgba(122,167,255,.30),
+          rgba(255,122,217,.22),
+          rgba(255,210,122,.20),
+          rgba(124,255,203,.20),
+          rgba(122,167,255,.26),
+          rgba(122,167,255,.00));
+      animation: drift 18s ease-in-out infinite alternate;
+    }
+    @keyframes drift{
+      0%{ transform: translate3d(-2%, -1%, 0) rotate(-6deg) scale(1.03); }
+      100%{ transform: translate3d(3%, 2%, 0) rotate(7deg) scale(1.06); }
+    }
 
-      if (diff > 0) {
-        setTime({
-          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-          mins: Math.floor((diff / (1000 * 60)) % 60),
-          secs: Math.floor((diff / 1000) % 60)
-        });
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [event.targetDate]);
+    .wrap{
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 26px 18px 72px;
+      position:relative;
+    }
 
-  return (
-    <div className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${event.color} p-[1px] shadow-[0_0_20px_rgba(0,0,0,0.6)] transform hover:scale-105 transition-all duration-300 group`}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-      <div className="relative z-10 bg-[#0f1115]/90 h-full p-6 rounded-lg flex flex-col items-center text-center border-t border-white/5">
-        <div className="mb-4 p-4 bg-black/60 rounded-full border border-white/10 shadow-inner group-hover:border-red-500/50 transition-colors">
-          {event.icon}
-        </div>
-        <h3 className="text-lg font-bold text-gray-200 mb-2 tracking-wide">{event.title}</h3>
-        <div className={`text-4xl md:text-5xl font-black ${event.textColor} font-mono tracking-tighter my-4 drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]`}>
-          {time.days}<span className="text-sm text-gray-500 font-sans ml-1 mr-2">天</span>
-          {time.hours.toString().padStart(2, '0')}<span className="text-sm text-gray-500 font-sans ml-1 mr-2">時</span>
-          {time.mins.toString().padStart(2, '0')}<span className="text-sm text-gray-500 font-sans ml-1">分</span>
-        </div>
-        <p className="text-xs text-gray-500 mt-auto border-t border-gray-800 pt-3 w-full">
-          {event.description}
-        </p>
-      </div>
-    </div>
-  );
-};
+    .poster{
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.04));
+      box-shadow: var(--shadow), var(--glow);
+      overflow:hidden;
+      position:relative;
+    }
+    .poster:before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:
+        radial-gradient(900px 180px at 20% 0%, rgba(124,255,203,.28), transparent 60%),
+        radial-gradient(900px 180px at 80% 0%, rgba(255,122,217,.24), transparent 60%),
+        radial-gradient(900px 260px at 50% 120%, rgba(122,167,255,.18), transparent 62%);
+      filter: blur(10px);
+      opacity:.9;
+      pointer-events:none;
+    }
+    .poster > *{ position:relative; z-index:1; }
 
-const DefenseBudgetDeepDive = () => (
-  <div className="bg-[#12141a] border border-red-900/50 rounded-xl overflow-hidden mb-20 relative">
-    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-600 via-red-600 to-yellow-600"></div>
-    <div className="p-8 md:p-12">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8">
-        <div>
-          <h2 className="text-3xl font-black text-white flex items-center gap-3">
-            <ShieldAlert className="w-8 h-8 text-red-500" />
-            國防預算黑箱實錄
-          </h2>
-          <p className="text-red-400 mt-2 font-mono text-sm tracking-widest">
-            THE 1.25 TRILLION SCANDAL
-          </p>
-        </div>
-        <div className="mt-4 md:mt-0 px-4 py-2 bg-red-950/30 border border-red-500/30 rounded text-red-400 text-xs font-bold">
-          專題追蹤
-        </div>
-      </div>
+    header{
+      padding: 22px 22px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+    }
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="bg-black/40 p-6 rounded-lg border-l-2 border-yellow-500 hover:bg-black/60 transition-colors">
-          <div className="flex items-center mb-4">
-            <ExternalLink className="w-5 h-5 text-yellow-500 mr-2" />
-            <h3 className="text-lg font-bold text-white">出口轉內銷</h3>
-          </div>
-          <p className="text-slate-400 text-sm leading-relaxed">
-            重大國防預算 1.25 兆，竟是先投書《華盛頓郵報》向美方輸誠，而非先向中華民國立法院報告。視國會監督為無物，將外國利益置於國內民主程序之上。
-          </p>
-        </div>
+    .heroRow{
+      display:grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+    @media (max-width: 980px){
+      .heroRow{ grid-template-columns: 1fr; }
+    }
 
-        <div className="bg-black/40 p-6 rounded-lg border-l-2 border-red-500 hover:bg-black/60 transition-colors">
-          <div className="flex items-center mb-4">
-            <FileText className="w-5 h-5 text-red-500 mr-2" />
-            <h3 className="text-lg font-bold text-white">空白授權</h3>
-          </div>
-          <p className="text-slate-400 text-sm leading-relaxed">
-            要求國會通過兆元預算，國防部卻僅提供「幾張投影片」說明。面對野黨要求提供細節與執行成效，總統拒絕赴立院說明，形同強索「空白支票」。
-          </p>
-        </div>
+    .headline{
+      border-radius: 22px;
+      padding: 18px 16px 14px;
+      background: linear-gradient(135deg, rgba(0,0,0,.22), rgba(255,255,255,.05));
+      border: 1px solid rgba(255,255,255,.12);
+      overflow:hidden;
+      position:relative;
+    }
+    .headline:after{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background: conic-gradient(from 180deg,
+        rgba(124,255,203,.00),
+        rgba(124,255,203,.26),
+        rgba(122,167,255,.30),
+        rgba(255,122,217,.26),
+        rgba(255,210,122,.22),
+        rgba(124,255,203,.24),
+        rgba(124,255,203,.00));
+      filter: blur(16px);
+      opacity:.38;
+      pointer-events:none;
+    }
+    .headline > *{ position:relative; z-index:1; }
 
-        <div className="bg-black/40 p-6 rounded-lg border-l-2 border-orange-500 hover:bg-black/60 transition-colors">
-          <div className="flex items-center mb-4">
-            <XCircle className="w-5 h-5 text-orange-500 mr-2" />
-            <h3 className="text-lg font-bold text-white">說一套做一套</h3>
-          </div>
-          <p className="text-slate-400 text-sm leading-relaxed">
-            口口聲聲「強化國防、照顧國軍」，但當在野黨通過「軍人加薪法案」時，行政院卻悍然拒絕執行與副署。只要不是民進黨提的案子，連對軍人好都要擋。
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-);
+    h1{
+      margin:0;
+      font-size: clamp(30px, 4.2vw, 54px);
+      letter-spacing: .9px;
+      line-height: 1.02;
+      text-shadow: 0 18px 50px rgba(0,0,0,.60);
+    }
+    .slogan{
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.65;
+      max-width: 78ch;
+    }
 
-const HistorySection = () => (
-  <div className="bg-gradient-to-r from-slate-900 to-slate-800 border-l-4 border-yellow-500 p-8 rounded-r-xl shadow-2xl mb-20 relative overflow-hidden group">
-    <div className="absolute top-0 right-0 w-64 h-full bg-yellow-500/5 -skew-x-12 transform origin-bottom-right group-hover:bg-yellow-500/10 transition-all duration-700"></div>
-    
-    <div className="relative z-10">
-      <h2 className="text-3xl font-black text-yellow-500 mb-8 flex items-center tracking-wider">
-        <History className="mr-3 w-8 h-8" /> 歷史鏡像：台南市長時期
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-        
-        <div className="flex flex-col justify-center items-center p-8 bg-black/40 rounded-xl border border-yellow-500/20 backdrop-blur-md hover:border-yellow-500/50 transition-all">
-          <span className="text-slate-400 text-sm mb-2 uppercase tracking-widest">拒絕進入議會紀錄</span>
-          <div className="flex items-baseline">
-            <span className="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-red-500 to-red-800 drop-shadow-[0_4px_10px_rgba(220,38,38,0.5)]">
-              {HISTORY_STATS.tainanDays}
-            </span>
-            <span className="text-2xl text-red-600 ml-2 font-bold">天</span>
-          </div>
-          <span className="text-xs text-slate-500 mt-4 bg-slate-900 px-3 py-1 rounded-full border border-slate-700">
-            2015/01/06 - 2015/08/28
-          </span>
-        </div>
+    .stamps{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top: 12px;
+    }
+    .stamp{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.22);
+      backdrop-filter: blur(10px);
+      color: var(--muted);
+      font-size: 13px;
+      white-space:nowrap;
+    }
+    .stamp b{ color: var(--text); }
 
-        <div className="space-y-6">
-          <div className="flex items-start">
-            <div className="bg-red-900/20 p-2 rounded mr-4">
-              <Scale className="w-6 h-6 text-red-500" />
-            </div>
-            <div>
-              <h4 className="text-white font-bold text-lg">監察院彈劾</h4>
-              <p className="text-slate-400 text-sm mt-1 leading-relaxed">
-                2015年監察院認定其「首開地方自治史上官員集體不進議會惡例」，違法失職，通過彈劾。
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-start">
-            <div className="bg-red-900/20 p-2 rounded mr-4">
-              <Gavel className="w-6 h-6 text-red-500" />
-            </div>
-            <div>
-              <h4 className="text-white font-bold text-lg">公懲會處分</h4>
-              <p className="text-slate-400 text-sm mt-1 leading-relaxed">
-                遭移送司法院公務員懲戒委員會，最終被記申誡。此為法院認證之「違法」。
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
+    .corner{
+      border-radius: 22px;
+      padding: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.16));
+      border: 1px solid rgba(255,255,255,.12);
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap: 12px;
+    }
+    .pill{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      backdrop-filter: blur(10px);
+    }
+    .pill label{
+      font-size: 12px;
+      color: var(--muted2);
+      white-space:nowrap;
+    }
+    .pill input{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      background: transparent;
+      border: none;
+      outline:none;
+      width: 175px;
+    }
+    .btnRow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .btn{
+      border:none;
+      cursor:pointer;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-weight: 900;
+      letter-spacing:.2px;
+      color:#07111E;
+      background: linear-gradient(135deg, var(--a1), var(--a2));
+      box-shadow: 0 14px 34px rgba(122,167,255,.22);
+    }
+    .btn:active{ transform: translateY(1px); }
+    .miniBadge{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.22);
+      color: var(--muted2);
+      font-size: 12px;
+      font-family: var(--mono);
+      white-space:nowrap;
+    }
 
-const VideoEvidence = () => (
-  <div className="mb-20">
-    <div className="flex items-center mb-8">
-      <div className="w-2 h-8 bg-blue-500 mr-4"></div>
-      <h2 className="text-3xl font-black text-white tracking-wide">
-        凡走過必留下痕跡 <span className="text-blue-500 text-lg font-normal ml-2">// 2024 總統辯論會存證</span>
-      </h2>
-    </div>
-    
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-      <div className="lg:col-span-3 bg-black rounded-xl overflow-hidden shadow-2xl border border-slate-800 relative group">
-        <div className="aspect-video w-full">
-             <iframe 
-                width="100%" 
-                height="100%" 
-                src="https://www.youtube.com/embed/kR9rLzZ-zYk?start=5712" 
-                title="賴清德辯論會發言" 
-                frameBorder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowFullScreen
-                className="opacity-90 group-hover:opacity-100 transition-opacity"
-            ></iframe>
-        </div>
-      </div>
+    .note{
+      color: var(--muted2);
+      font-size: 12px;
+      line-height: 1.7;
+      margin: 10px 0 0;
+    }
+    .note code{
+      font-family: var(--mono);
+      background: rgba(255,255,255,.07);
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.10);
+    }
 
-      <div className="lg:col-span-2 flex flex-col justify-center space-y-6">
-        <div className="bg-slate-800/80 p-6 rounded-xl border-l-4 border-blue-500 backdrop-blur">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-white font-bold text-xl">2023 選前</h3>
-            <span className="text-xs bg-blue-900 text-blue-200 px-2 py-1 rounded">為了選票</span>
-          </div>
-          <p className="text-blue-200 text-lg italic leading-relaxed font-serif">
-            「依據憲法，總統有義務接受立法院的國情咨詢...如果不去，那才是失職。」
-          </p>
-        </div>
-        
-        <div className="flex justify-center py-2">
-            <ArrowRight className="text-slate-600 w-8 h-8 rotate-90 md:rotate-0" />
-        </div>
-        
-        <div className="bg-slate-800/80 p-6 rounded-xl border-l-4 border-red-500 backdrop-blur">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-white font-bold text-xl">2024-25 選後</h3>
-            <span className="text-xs bg-red-900 text-red-200 px-2 py-1 rounded">為了權力</span>
-          </div>
-          <p className="text-red-200 text-lg italic leading-relaxed font-serif">
-            「立法院邀請總統即問即答是違憲...總統不應成為國會擴權的背書者。」
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-);
+    .content{
+      padding: 18px 18px 20px;
+      display:grid;
+      grid-template-columns: 1.22fr .78fr;
+      gap: 16px;
+    }
+    @media (max-width: 980px){
+      .content{ grid-template-columns: 1fr; }
+    }
 
-const ContradictionWall = () => (
-  <div className="relative">
-    <div className="text-center mb-16">
-      <span className="text-red-500 font-bold tracking-[0.3em] text-sm uppercase mb-2 block">FACTS CHECK</span>
-      <h2 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tighter">
-        矛盾言行回顧錄：15大爭議
-      </h2>
-      <div className="w-24 h-1 bg-red-600 mx-auto"></div>
-    </div>
+    .stack{ display:grid; gap: 12px; }
 
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {CONTRADICTIONS.map((item, index) => (
-        <div key={index} className="bg-[#1a1d24] rounded-lg p-0 hover:bg-[#20232a] transition-all duration-300 border border-slate-800 hover:border-red-500/40 group overflow-hidden flex flex-col h-full shadow-lg">
-          <div className="p-5 flex-grow">
-            <div className="flex justify-between items-start mb-4">
-              <span className="bg-red-950/40 text-red-400 text-[10px] px-2 py-1 rounded border border-red-900/50 uppercase tracking-wider font-bold">
-                {item.tag}
-              </span>
-              <span className="text-[10px] text-slate-500 font-mono flex items-center bg-black/30 px-2 py-1 rounded">
-                <BookOpen className="w-3 h-3 mr-1" /> {item.source}
-              </span>
-            </div>
-            
-            <h3 className="text-lg font-bold text-slate-100 mb-3 group-hover:text-red-400 transition-colors leading-tight">
-              {item.title}
-            </h3>
-            
-            <p className="text-slate-400 text-sm leading-relaxed mb-4 border-l-2 border-slate-700 pl-3">
-              {item.content}
-            </p>
-          </div>
-          
-          <div className="bg-black/40 p-4 border-t border-slate-800/50 mt-auto">
-            <div className="flex items-start">
-              <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 mr-2 flex-shrink-0" />
-              <div>
-                <span className="text-xs text-yellow-500 font-bold block mb-1">荒謬與矛盾點：</span>
-                <p className="text-xs text-slate-400 leading-normal">{item.reason}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
+    .panel{
+      border: 1px solid rgba(255,255,255,.12);
+      background: linear-gradient(135deg, rgba(0,0,0,.22), rgba(255,255,255,.05));
+      border-radius: var(--radius);
+      overflow:hidden;
+      position:relative;
+    }
+    .panel:before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:
+        radial-gradient(700px 220px at 10% 0%, rgba(124,255,203,.16), transparent 60%),
+        radial-gradient(640px 240px at 100% 10%, rgba(255,122,217,.16), transparent 55%),
+        radial-gradient(620px 260px at 50% 120%, rgba(122,167,255,.12), transparent 55%);
+      opacity:.95;
+      pointer-events:none;
+    }
+    .panel > *{ position:relative; z-index:1; }
 
-export default function App() {
-  return (
-    <div className="min-h-screen bg-[#050505] text-slate-200 font-sans selection:bg-red-900 selection:text-white pb-20 overflow-x-hidden">
-      
-      {/* Background Ambience */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-red-900/10 rounded-full blur-[128px]"></div>
-        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-yellow-900/5 rounded-full blur-[128px]"></div>
-      </div>
+    .panelHead{
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      display:flex;
+      justify-content:space-between;
+      gap: 12px;
+      flex-wrap:wrap;
+      align-items:flex-start;
+    }
+    .panelHead h2{
+      margin:0;
+      font-size: 15px;
+      line-height:1.35;
+      letter-spacing:.2px;
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      max-width: 76ch;
+    }
+    .panelHead p{
+      margin:6px 0 0;
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.55;
+      max-width: 84ch;
+    }
+    .since{
+      margin-left:auto;
+      text-align:right;
+      color: var(--muted2);
+      font-size: 12px;
+      font-family: var(--mono);
+      white-space:nowrap;
+    }
 
-      {/* Hero Section */}
-      <header className="relative pt-24 pb-20 px-4 z-10">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center mb-6 px-4 py-1.5 border border-red-500/30 rounded-full bg-red-950/20 backdrop-blur-md animate-fade-in-up">
-            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse mr-2"></div>
-            <span className="text-red-400 text-xs font-bold tracking-[0.2em]">憲政危機即時監測 V3.0</span>
-          </div>
-          
-          <h1 className="text-5xl md:text-8xl font-black text-white mb-8 tracking-tighter drop-shadow-2xl leading-[1.1]">
-            市長不進議會<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-red-500 to-yellow-500 relative">
-              總統不進國會
-            </span>
-          </h1>
-          
-          <p className="text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed font-light">
-            權力的傲慢是民主最大的腐蝕劑。<br/>
-            本儀表板詳實記錄從地方到中央，一貫的逃避監督模式、預算黑箱與憲政爭議。
-          </p>
-        </div>
-      </header>
+    .mega{
+      padding: 12px 14px 14px;
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 560px){
+      .mega{ grid-template-columns: 1fr; }
+    }
 
-      <main className="max-w-7xl mx-auto px-4 space-y-24 relative z-10">
-        
-        {/* Live Timers */}
-        <section className="-mt-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {CRITICAL_EVENTS.map(event => (
-              <TimerCard key={event.id} event={event} />
-            ))}
-          </div>
-        </section>
+    .digit{
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      padding: 12px 12px 10px;
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap: 12px;
+      min-height: 82px;
+      position:relative;
+      overflow:hidden;
+    }
+    .digit:after{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background: radial-gradient(260px 90px at 30% 10%, rgba(255,210,122,.18), transparent 60%),
+                  radial-gradient(240px 90px at 90% 30%, rgba(122,167,255,.16), transparent 60%);
+      pointer-events:none;
+      opacity:.9;
+    }
+    .digit > *{ position:relative; z-index:1; }
 
-        {/* Defense Budget Deep Dive (New Section) */}
-        <section>
-          <DefenseBudgetDeepDive />
-        </section>
+    .digit b{
+      font-family: var(--mono);
+      font-size: clamp(34px, 4vw, 54px);
+      letter-spacing: 1px;
+      line-height: 1;
+      text-shadow:
+        0 0 26px rgba(122,167,255,.24),
+        0 0 34px rgba(255,122,217,.14),
+        0 18px 60px rgba(0,0,0,.55);
+    }
+    .digit span{
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing:.3px;
+      padding-bottom: 6px;
+      white-space:nowrap;
+    }
 
-        {/* History Contrast */}
-        <section>
-          <HistorySection />
-        </section>
+    .side{ display:grid; gap: 12px; }
 
-        {/* Video Evidence */}
-        <section>
-          <VideoEvidence />
-        </section>
+    .sideCard{
+      border: 1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.18));
+      border-radius: var(--radius);
+      overflow:hidden;
+      box-shadow: 0 18px 46px rgba(0,0,0,.36);
+    }
+    .sideCardHead{
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      flex-wrap:wrap;
+    }
+    .sideCardHead h3{
+      margin:0;
+      font-size: 14px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      letter-spacing:.2px;
+    }
+    .sideCardBody{ padding: 12px 14px 14px; }
 
-        {/* The List 15 Items */}
-        <section>
-          <ContradictionWall />
-        </section>
-
-      </main>
-
-      <footer className="mt-24 border-t border-slate-900 py-12 text-center relative z-10 bg-[#050505]">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="flex items-center space-x-2 text-red-500/80">
-            <Clock className="w-4 h-4" />
-            <span className="text-sm font-mono tracking-widest">SYSTEM TIME: 2025/12/28</span>
-          </div>
-          <p className="text-xs text-slate-700 max-w-lg mx-auto leading-relaxed">
-            * 本網站內容基於公開新聞報導、立法院公報與歷史紀錄整理。<br/>
-            旨在呈現憲政運作之現況與歷史對照，僅供公民監督參考。
-          </p>
-        </div>
-      </footer>
-    </div>
-  );
-}
+    .timeline{
+      margin:0;
+      padding:0;
+      list-style:none;
+      display:grid;
+      gap: 10px;
+      position:relative;
+    }
+    .timeline:before{
+      content:"";
+      position:absolute;
+      left: 11px;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: rgba(255,255,255,.14);
+    }
+    .tItem{
+      display:grid;
+      grid-template-columns: 26px 1fr;
+      gap: 10px;
+      align-items:flex-start;
+    }
+    .dot{
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: radial-gradient(circle at 30% 30%, rgba(124,255,203,.70), rgba(122,167,255,.15));
+      box-shadow: 0 0 26px rgba(122,167,255,.18);
+      margin-top: 2px;
+    }
+    .tText b{
+      display:block;
+      font-size: 13.5px;
+      letter-spacing:.2px;
+      line-height: 1.25;
+    }
+    .tText span{
+      display:block;
+      margin-top: 6px;
+      color: var(--muted);
+      fon
